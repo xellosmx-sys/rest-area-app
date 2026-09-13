@@ -61,7 +61,7 @@
     
     .btn-location, .btn-home { position: absolute; right: 15px; z-index: 1100; width: 46px; height: 46px; border-radius: 50%; font-size: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
     .btn-location { bottom: 25px; }
-    .btn-home { bottom: 80px; } /* 위치 버튼 위에 배치 */
+    .btn-home { bottom: 80px; } 
 
     #routeSelectorBar { display: none; position: absolute; top: 64px; left: 50%; transform: translateX(-50%); z-index: 1000; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(6px); padding: 5px 8px; border-radius: 20px; border: 1px solid #38bdf8; box-shadow: 0 4px 15px rgba(0,0,0,0.2); gap: 6px; max-width: 95vw; overflow-x: auto; }
     body.dark-theme #routeSelectorBar { background: rgba(15, 23, 42, 0.92); }
@@ -108,7 +108,6 @@
     .ev-op-badge { background: #15803d; color: white; font-size: 10px; font-weight: 700; padding: 2px 5px; border-radius: 4px; }
     .ev-spec-pill { background: #dcfce7; color: #166534; font-size: 10px; font-weight: 700; padding: 2px 5px; border-radius: 4px; }
 
-    /* 토글 스위치 CSS */
     .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
     .switch input { opacity: 0; width: 0; height: 0; }
     .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .4s; border-radius: 24px; }
@@ -165,13 +164,17 @@
               <option value="EV">전기차 충전소 우선</option>
             </select>
           </div>
+          <!-- 집 주소 입력칸 자동완성 적용 -->
           <div class="setting-row">
             <span>🏠 내 집 주소 저장</span>
-            <input type="text" id="homeInput" placeholder="예: 서울시 강남구" style="width: 140px;" onchange="saveSettings()" />
+            <div class="input-wrapper" style="width: 150px; position: relative;">
+              <input type="text" id="homeInput" class="input-box" placeholder="예: 강남구 테헤란로" autocomplete="off" onchange="saveSettings()" style="text-align: left;" />
+              <ul id="homeDropdown" class="autocomplete-dropdown" style="width: 100%; right: 0; left: auto; max-height: 150px;"></ul>
+            </div>
           </div>
           <div class="setting-row" style="margin-bottom: 0;">
             <span>🍜 선호 음식(메뉴) 강조</span>
-            <input type="text" id="foodInput" placeholder="예: 우동" style="width: 140px;" onchange="saveSettings()" />
+            <input type="text" id="foodInput" class="input-box" placeholder="예: 우동" style="width: 150px; text-align: left;" onchange="saveSettings()" />
           </div>
         </div>
 
@@ -332,12 +335,10 @@
       if (!homeAddr) return alert('설정 창(⚙️)에서 내 집 주소를 먼저 등록해주세요.');
       if (!currentUserLatLng) return alert('현재 위치를 파악 중입니다. 잠시 후 다시 시도해주세요.');
 
-      // 현 위치를 출발지로 강제 맵핑
       searchStartCoord = { name: '현위치', lat: currentUserLatLng[0], lng: currentUserLatLng[1] };
       document.getElementById('startInput').value = '현위치';
       lastConfirmedStartText = '현위치';
       
-      // 도착지는 등록된 집 주소 텍스트로 채우고 탐색 실행
       document.getElementById('endInput').value = homeAddr;
       handleSearchRoute();
     }
@@ -365,25 +366,35 @@
     }
     function goToCurrentLocation() { if (currentUserLatLng) { map.setView(currentUserLatLng, 15); } initUserLocation(); }
 
-    /* ====== 자동완성 ====== */
-    let startTimeout, endTimeout;
+    /* ====== 자동완성 (집 주소 포함) ====== */
+    let startTimeout, endTimeout, homeTimeout;
     const startInput = document.getElementById('startInput');
     const endInput = document.getElementById('endInput');
+    const homeInput = document.getElementById('homeInput');
+    
     const startDropdown = document.getElementById('startDropdown');
     const endDropdown = document.getElementById('endDropdown');
+    const homeDropdown = document.getElementById('homeDropdown');
 
     startInput.addEventListener('input', (e) => handleAutocomplete(e.target.value, startDropdown, 'start'));
     endInput.addEventListener('input', (e) => handleAutocomplete(e.target.value, endDropdown, 'end'));
+    homeInput.addEventListener('input', (e) => handleAutocomplete(e.target.value, homeDropdown, 'home'));
 
     document.addEventListener('click', (e) => {
       if (!e.target.closest('.input-wrapper')) {
         startDropdown.style.display = 'none';
         endDropdown.style.display = 'none';
+        homeDropdown.style.display = 'none';
       }
     });
 
     async function handleAutocomplete(keyword, dropdown, type) {
-      clearTimeout(type === 'start' ? startTimeout : endTimeout);
+      let activeTimeout;
+      if (type === 'start') activeTimeout = startTimeout;
+      else if (type === 'end') activeTimeout = endTimeout;
+      else activeTimeout = homeTimeout;
+      
+      clearTimeout(activeTimeout);
       dropdown.style.display = 'none';
       if (!keyword.trim()) return;
 
@@ -391,21 +402,30 @@
         const results = await searchPlaces(keyword);
         if (results.length > 0) {
           dropdown.innerHTML = results.map((r, i) => `<li onclick="selectAutocompleteItem('${type}', ${i})"><div class="ac-title">${r.name}</div><div class="ac-addr">${r.address || '주소 없음'}</div></li>`).join('');
-          if (type === 'start') window.tempStartResults = results; else window.tempEndResults = results;
+          
+          if (type === 'start') window.tempStartResults = results; 
+          else if (type === 'end') window.tempEndResults = results;
+          else window.tempHomeResults = results;
+          
           dropdown.style.display = 'block';
         }
       }, 400);
 
-      if (type === 'start') startTimeout = timeoutId; else endTimeout = timeoutId;
+      if (type === 'start') startTimeout = timeoutId; 
+      else if (type === 'end') endTimeout = timeoutId;
+      else homeTimeout = timeoutId;
     }
 
     function selectAutocompleteItem(type, index) {
       if (type === 'start') {
         searchStartCoord = window.tempStartResults[index];
         startInput.value = searchStartCoord.name; lastConfirmedStartText = searchStartCoord.name; startDropdown.style.display = 'none';
-      } else {
+      } else if (type === 'end') {
         searchEndCoord = window.tempEndResults[index];
         endInput.value = searchEndCoord.name; lastConfirmedEndText = searchEndCoord.name; endDropdown.style.display = 'none';
+      } else if (type === 'home') {
+        const selected = window.tempHomeResults[index];
+        homeInput.value = selected.name; homeDropdown.style.display = 'none'; saveSettings();
       }
     }
 
@@ -418,19 +438,17 @@
 
     function renderMarkers(items) {
       markersLayer.clearLayers();
-      const prefFood = localStorage.getItem('pref_food') || ''; // [기능 2] 설정된 음식 키워드 가져오기
+      const prefFood = localStorage.getItem('pref_food') || ''; 
       
       items.forEach(item => {
         const lat = parseFloat(item.lat); const lng = parseFloat(item.lng);
         if (isNaN(lat) || isNaN(lng)) return;
         
-        // [기능 2] 해당 휴게소 메뉴 리스트에 선호 음식이 포함되어 있는지 검사
         let isFavFood = false;
         if (prefFood && item.menu_list) {
           isFavFood = item.menu_list.some(m => m.name && m.name.includes(prefFood));
         }
         
-        // 선호 음식이 있다면 빨간색(ef4444)으로 마커 스타일 덮어쓰기
         const customStyle = isFavFood ? 'background: #ef4444; color: white; border-color: #ef4444;' : '';
         const iconHtml = `<div class="rest-tag" style="${customStyle}">${item.name}${isFavFood ? ' ⭐' : ''}</div><div class="rest-dot"></div>`;
         
@@ -576,17 +594,21 @@
 
       try {
         if (!(searchStartCoord && lastConfirmedStartText === startText)) {
-          const startResults = await searchPlaces(startText);
-          if (startResults.length === 0) { alert(`출발지 '${startText}' 위치를 찾지 못했습니다.`); btn.textContent = '탐색'; btn.disabled = false; return; }
-          // 단일 결과이거나 강제 할당된 현위치인 경우 팝업 없이 진행
-          if(startResults.length === 1 || startText === '현위치') {
-             searchStartCoord = startResults[0] || searchStartCoord;
+          // 현위치 강제 할당 처리
+          if (startText === '현위치' && currentUserLatLng) {
+            searchStartCoord = { name: '현위치', lat: currentUserLatLng[0], lng: currentUserLatLng[1] };
+            lastConfirmedStartText = '현위치';
           } else {
-             const chosenStart = await promptPlaceSelection(`출발지 선택: ${startText}`, startResults);
-             if (!chosenStart) { btn.textContent = '탐색'; btn.disabled = false; return; }
-             searchStartCoord = chosenStart; 
+            const startResults = await searchPlaces(startText);
+            if (startResults.length === 0) { alert(`출발지 '${startText}' 위치를 찾지 못했습니다.`); btn.textContent = '탐색'; btn.disabled = false; return; }
+            if(startResults.length === 1) { searchStartCoord = startResults[0]; } 
+            else {
+               const chosenStart = await promptPlaceSelection(`출발지 선택: ${startText}`, startResults);
+               if (!chosenStart) { btn.textContent = '탐색'; btn.disabled = false; return; }
+               searchStartCoord = chosenStart; 
+            }
+            document.getElementById('startInput').value = searchStartCoord.name; lastConfirmedStartText = searchStartCoord.name;
           }
-          document.getElementById('startInput').value = searchStartCoord.name; lastConfirmedStartText = searchStartCoord.name;
           await new Promise(r => setTimeout(r, 200));
         }
 
