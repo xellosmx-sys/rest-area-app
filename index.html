@@ -569,8 +569,10 @@
     }
 
     function selectActiveRoute(targetIdx) {
-      document.querySelectorAll('.route-tab-btn').forEach((b, idx) => b.classList.toggle('active', idx === targetIdx));
-      
+      document.querySelectorAll('.route-tab-btn').forEach((b, idx) => {
+        b.classList.toggle('active', idx === targetIdx);
+      });
+
       routeLayersGroup.clearLayers();
       arrowLayersGroup.clearLayers(); // 화살표 초기화
 
@@ -579,9 +581,9 @@
         const isSelected = (idx === targetIdx);
 
         const poly = L.polyline(latLngs, {
-          color: isSelected ? '#38bdf8' : '#64748b',
-          weight: isSelected ? 6 : 4,
-          opacity: isSelected ? 0.95 : 0.4,
+          color: isSelected ? '#2563eb' : '#64748b', // 선택된 경로를 더 진한 파란색으로 변경
+          weight: isSelected ? 12 : 4,               // 선 굵기를 6에서 12로 대폭 확대
+          opacity: isSelected ? 0.9 : 0.4,
           dashArray: isSelected ? null : '5, 5'
         }).addTo(routeLayersGroup);
 
@@ -594,27 +596,37 @@
             patterns: [
               {
                 offset: 25, 
-                repeat: 100, // 100 픽셀마다 화살표 표시
+                repeat: 80, // 화살표 간격을 100에서 80으로 줄여 방향성 강조
                 symbol: L.Symbol.arrowHead({
-                  pixelSize: 14, 
+                  pixelSize: 10, // 화살표 크기를 두꺼워진 선 안에 알맞게 들어가도록 조정
                   polygon: false, 
-                  pathOptions: { stroke: true, weight: 3, color: '#ffffff', opacity: 0.9 } // 파란 선 위 흰색 화살표
+                  pathOptions: { stroke: true, weight: 3, color: '#ffffff', opacity: 1 } // 완전한 불투명 흰색 화살표
                 })
               }
             ]
           }).addTo(arrowLayersGroup);
 
           const isSouthBound = (searchStartCoord && searchEndCoord) ? (searchStartCoord.lat > searchEndCoord.lat) : true;
+
           const filtered = allRestAreas.filter(item => {
-            const rLat = parseFloat(item.lat); const rLng = parseFloat(item.lng);
+            const rLat = parseFloat(item.lat);
+            const rLng = parseFloat(item.lng);
             if (isNaN(rLat) || isNaN(rLng)) return false;
-            const p = [rLat, rLng]; let onPath = false;
+
+            const p = [rLat, rLng];
+            let onPath = false;
+
             for (let i = 0; i < latLngs.length - 1; i++) {
-              if (distToSegment(p, latLngs[i], latLngs[i + 1]) <= 1.8) { onPath = true; break; }
+              if (distToSegment(p, latLngs[i], latLngs[i + 1]) <= 1.8) {
+                onPath = true;
+                break;
+              }
             }
+
             if (!onPath) return false;
             return isRightDirection(item, isSouthBound);
           });
+
           renderMarkers(filtered);
         }
       });
@@ -635,6 +647,17 @@
       foundRoutes = [];
       if (currentUserLatLng) map.setView(currentUserLatLng, 15);
       else map.setView([36.5, 127.8], 8);
+    }
+  </script>
+  
+  <!-- 4. PWA 서비스 워커 등록 스크립트 추가 -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(() => console.log('서비스 워커 등록 성공'))
+          .catch(err => console.error('서비스 워커 등록 실패:', err));
+      });
     }
   </script>
 </body>
