@@ -7,89 +7,46 @@
 
   <link rel="manifest" href="./manifest.json?v=2">
 
-  <!-- 지도 라이브러리 및 방향 화살표 플러그인 -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.js"></script>
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Pretendard", Roboto, sans-serif; }
-    body { overflow: hidden; background: #0f172a; }
+    body { overflow: hidden; background: #0f172a; transition: background 0.3s; }
+    
+    /* 라이트 모드 (화면 밝게) 테마 */
+    body.light-theme { background: #f8fafc; }
+    body.light-theme #navbar { background: #ffffff; color: #1e293b; border-bottom: 1px solid #e2e8f0; }
+    body.light-theme .input-box { background: #f1f5f9; color: #1e293b; border-color: #cbd5e1; }
+    body.light-theme .btn-swap { background: #e2e8f0; border-color: #cbd5e1; color: #2563eb; }
+    body.light-theme #splash-screen { background-color: #f8fafc; color: #1e293b; }
+    body.light-theme .rest-tag { background: #ffffff; color: #2563eb; border-color: #2563eb; }
 
-    #splash-screen {
-      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-      background-color: #0f172a; color: white; display: flex; flex-direction: column;
-      justify-content: center; align-items: center; z-index: 9999; transition: opacity 0.5s ease;
-    }
+    #splash-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: #0f172a; color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; transition: opacity 0.5s ease; }
     #splash-screen h1 { font-size: 32px; font-weight: 900; color: #38bdf8; margin-bottom: 10px; }
     #splash-screen p { font-size: 14px; color: #94a3b8; }
 
-    #navbar {
-      height: 56px; background: #1e293b; color: white; display: flex; 
-      align-items: center; justify-content: space-between; padding: 0 10px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 1000; position: relative; gap: 4px;
-    }
+    #navbar { height: 56px; background: #1e293b; color: white; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 1000; position: relative; gap: 4px; }
     .search-container { display: flex; gap: 4px; align-items: center; width: 100%; justify-content: space-between; }
     
-    .input-wrapper { position: relative; width: 28%; }
-    .input-box {
-      padding: 7px 6px; border-radius: 6px; border: 1px solid #475569;
-      background: #0f172a; color: white; font-size: 13px; width: 100%; outline: none; text-align: center;
-    }
+    .input-wrapper { position: relative; width: 28%; flex-grow: 1; }
+    .input-box { padding: 7px 6px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: white; font-size: 13px; width: 100%; outline: none; text-align: center; }
 
-    /* 자동완성 드롭다운 UI */
-    .autocomplete-dropdown {
-      position: absolute; top: 100%; left: 0; width: 180%; background: #ffffff;
-      border: 1px solid #cbd5e1; border-radius: 6px; max-height: 220px; overflow-y: auto;
-      z-index: 3000; list-style: none; margin-top: 4px; display: none;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-    }
-    .autocomplete-dropdown li {
-      padding: 10px; border-bottom: 1px solid #e2e8f0; cursor: pointer; color: #0f172a; text-align: left;
-    }
+    .autocomplete-dropdown { position: absolute; top: 100%; left: 0; width: 180%; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; max-height: 220px; overflow-y: auto; z-index: 3000; list-style: none; margin-top: 4px; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+    .autocomplete-dropdown li { padding: 10px; border-bottom: 1px solid #e2e8f0; cursor: pointer; color: #0f172a; text-align: left; }
     .autocomplete-dropdown li:hover { background: #e0f2fe; }
     .ac-title { font-size: 12px; font-weight: 800; color: #1e293b; margin-bottom: 2px; }
     .ac-addr { font-size: 10px; color: #64748b; }
 
-    .btn-swap {
-      background: #334155; border: 1px solid #475569; color: #38bdf8;
-      width: 32px; height: 32px; border-radius: 6px; font-size: 15px; font-weight: bold;
-      display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0;
-    }
-    .btn-swap:active { background: #475569; }
+    .btn-swap { background: #334155; border: 1px solid #475569; color: #38bdf8; width: 32px; height: 32px; border-radius: 6px; font-size: 15px; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+    .btn-search { padding: 7px 12px; border-radius: 6px; border: none; font-weight: 700; font-size: 13px; background: #2563eb; color: white; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+    .btn-settings { padding: 5px; border-radius: 6px; border: 1px solid #475569; background: #334155; color: white; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex-shrink: 0; }
 
-    .btn-search {
-      padding: 7px 10px; border-radius: 6px; border: none; font-weight: 700; font-size: 12px;
-      background: #2563eb; color: white; cursor: pointer; white-space: nowrap;
-    }
-    .btn-reset {
-      padding: 7px 8px; border-radius: 6px; border: 1px solid #64748b;
-      background: #334155; color: #e2e8f0; cursor: pointer; font-size: 12px; white-space: nowrap;
-    }
-
-    #statusBadge {
-      position: absolute; bottom: 20px; left: 15px; z-index: 1100;
-      background: rgba(15, 23, 42, 0.9); border: 1px solid #38bdf8;
-      color: #38bdf8; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: bold;
-    }
-
-    .btn-location {
-      position: absolute; bottom: 25px; right: 15px; z-index: 1100;
-      width: 46px; height: 46px; border-radius: 50%; background: #0f172a;
-      border: 2px solid #38bdf8; color: #38bdf8; font-size: 22px;
-      display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-    }
-
-    #routeSelectorBar {
-      display: none; position: absolute; top: 64px; left: 50%; transform: translateX(-50%);
-      z-index: 1000; background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(6px);
-      padding: 5px 8px; border-radius: 20px; border: 1px solid #38bdf8;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.4); gap: 6px; max-width: 95vw; overflow-x: auto;
-    }
-    .route-tab-btn {
-      padding: 5px 10px; border-radius: 14px; border: none; font-size: 11px; font-weight: 700;
-      background: transparent; color: #94a3b8; cursor: pointer; white-space: nowrap;
-    }
+    #statusBadge { position: absolute; bottom: 20px; left: 15px; z-index: 1100; background: rgba(15, 23, 42, 0.9); border: 1px solid #38bdf8; color: #38bdf8; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; }
+    .btn-location { position: absolute; bottom: 25px; right: 15px; z-index: 1100; width: 46px; height: 46px; border-radius: 50%; background: #0f172a; border: 2px solid #38bdf8; color: #38bdf8; font-size: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+    #routeSelectorBar { display: none; position: absolute; top: 64px; left: 50%; transform: translateX(-50%); z-index: 1000; background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(6px); padding: 5px 8px; border-radius: 20px; border: 1px solid #38bdf8; box-shadow: 0 4px 15px rgba(0,0,0,0.4); gap: 6px; max-width: 95vw; overflow-x: auto; }
+    .route-tab-btn { padding: 5px 10px; border-radius: 14px; border: none; font-size: 11px; font-weight: 700; background: transparent; color: #94a3b8; cursor: pointer; white-space: nowrap; }
     .route-tab-btn.active { background: #2563eb; color: white; box-shadow: 0 2px 6px rgba(37,99,235,0.5); }
 
     #map { height: calc(100vh - 56px); width: 100vw; z-index: 1; }
@@ -98,23 +55,27 @@
     .rest-tag { background: #0f172a; color: #38bdf8; border: 1px solid #38bdf8; border-radius: 6px; padding: 3px 8px; font-size: 11px; font-weight: 800; white-space: nowrap; box-shadow: 0 3px 6px rgba(0,0,0,0.5); }
     .rest-dot { width: 12px; height: 12px; background: #0284c7; border: 2px solid #ffffff; border-radius: 50%; margin-top: 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.4); }
 
-    #placeSelectOverlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); z-index: 2500; justify-content: center; align-items: center; }
-    #placeSelectOverlay.active { display: flex; }
+    .overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); z-index: 2500; justify-content: center; align-items: center; }
+    .overlay.active { display: flex; }
+    
     .place-select-box { background: white; width: 92%; max-width: 420px; max-height: 75vh; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
     .place-select-header { background: #1e293b; color: white; padding: 14px 16px; font-size: 14px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #38bdf8; }
     .place-list { overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
     .place-item { padding: 10px 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; cursor: pointer; text-align: left; }
 
-    #modalOverlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); z-index: 2000; justify-content: center; align-items: flex-end; }
-    #modalOverlay.active { display: flex; }
+    #modalOverlay { align-items: flex-end; z-index: 2000; }
     .modal-content { background: #ffffff; width: 100%; max-height: 85vh; border-radius: 20px 20px 0 0; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 -10px 25px rgba(0,0,0,0.4); }
     .modal-header-banner { position: relative; padding: 16px 20px; background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%); color: white; border-bottom: 3px solid #38bdf8; }
     .btn-modal-close { position: absolute; top: 14px; right: 14px; width: 32px; height: 32px; border-radius: 50%; border: none; background: rgba(255,255,255,0.2); color: white; font-size: 16px; cursor: pointer; font-weight: bold; }
     .modal-body { padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+    
+    .fact-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; }
+    .fact-card h4 { font-size: 14px; color: #1e293b; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+    .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 13px; color: #334155; font-weight: 600; }
+    .setting-row select { padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px; outline: none; }
+    
     .badge { display: inline-block; padding: 3px 6px; font-size: 11px; font-weight: 700; border-radius: 5px; color: white; margin-bottom: 4px; }
     .badge-혼잡 { background: #ef4444; } .badge-보통 { background: #f59e0b; } .badge-원활 { background: #10b981; }
-    .fact-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; }
-    .fact-card h4 { font-size: 13px; color: #1e293b; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
     .brand-pill { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; margin-right: 4px; margin-bottom: 4px; }
     .store-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 10px; }
     .store-tab-btn { padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: white; color: #334155; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
@@ -127,6 +88,14 @@
     .ev-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px; margin-top: 6px; }
     .ev-op-badge { background: #15803d; color: white; font-size: 10px; font-weight: 700; padding: 2px 5px; border-radius: 4px; }
     .ev-spec-pill { background: #dcfce7; color: #166534; font-size: 10px; font-weight: 700; padding: 2px 5px; border-radius: 4px; }
+
+    /* 토글 스위치 CSS */
+    .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .4s; border-radius: 24px; }
+    .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+    input:checked + .slider { background-color: #2563eb; }
+    input:checked + .slider:before { transform: translateX(20px); }
   </style>
 </head>
 <body>
@@ -148,9 +117,8 @@
         <ul id="endDropdown" class="autocomplete-dropdown"></ul>
       </div>
       <button class="btn-search" onclick="handleSearchRoute()">탐색</button>
-      <button class="btn-reset" onclick="resetView()">초기화</button>
-      <!-- 강제 업데이트 버튼 추가 -->
-      <button class="btn-reset" style="background:#059669; border-color:#047857; padding:7px 8px; font-size:13px;" onclick="forceAppUpdate()" title="최신 버전으로 업데이트">🔄</button>
+      <!-- 설정 버튼으로 교체 -->
+      <button class="btn-settings" onclick="openSettings()">⚙️</button>
     </div>
   </div>
 
@@ -159,8 +127,55 @@
   <div id="routeSelectorBar"></div>
   <div id="map"></div>
 
-  <!-- 폴백 다중 선택 팝업 (자동완성을 클릭하지 않고 검색을 눌렀을 때 대비) -->
-  <div id="placeSelectOverlay">
+  <!-- 앱 설정 팝업창 -->
+  <div id="settingsOverlay" class="overlay" onclick="handleSettingsClick(event)" style="z-index: 2600; align-items: flex-end;">
+    <div class="modal-content" style="max-height: 90vh;">
+      <div class="modal-header-banner" style="background: linear-gradient(135deg, #0f172a 0%, #334155 100%);">
+        <button class="btn-modal-close" onclick="closeSettings()">✕</button>
+        <h1 style="font-size: 18px; font-weight: 900; margin-top: 2px;">앱 설정</h1>
+      </div>
+      <div class="modal-body">
+        
+        <div class="fact-card" style="border-left: 4px solid #10b981;">
+          <h4>🚙 맞춤 정보</h4>
+          <div class="setting-row">
+            <span>내 차 연료 필터</span>
+            <select id="fuelSelect" onchange="saveSettings()">
+              <option value="ALL">모두 보기 (기본)</option>
+              <option value="LPG">LPG 충전소 우선</option>
+              <option value="EV">전기차 충전소 우선</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="fact-card" style="border-left: 4px solid #3b82f6;">
+          <h4>📱 화면 설정</h4>
+          <div class="setting-row">
+            <span>밝은 테마 (라이트 모드)</span>
+            <label class="switch">
+              <input type="checkbox" id="themeToggle" onchange="saveSettings()">
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="fact-card" style="border-left: 4px solid #ef4444;">
+          <h4>🛠 앱 관리</h4>
+          <div class="setting-row" style="margin-bottom: 12px;">
+            <span>검색 기록 및 지도 초기화</span>
+            <button class="btn-search" style="background:#64748b;" onclick="resetView(); closeSettings();">초기화 실행</button>
+          </div>
+          <div class="setting-row">
+            <span>최신 정보 강제 업데이트</span>
+            <button class="btn-search" style="background:#059669;" onclick="forceAppUpdate()">🔄 업데이트</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div id="placeSelectOverlay" class="overlay">
     <div class="place-select-box">
       <div class="place-select-header">
         <span id="placeSelectTitle">장소를 선택해 주세요</span>
@@ -170,8 +185,7 @@
     </div>
   </div>
 
-  <!-- 휴게소 상세 모달 -->
-  <div id="modalOverlay" onclick="handleOverlayClick(event)">
+  <div id="modalOverlay" class="overlay" onclick="handleOverlayClick(event)">
     <div class="modal-content" id="modalContent">
       <div class="modal-header-banner">
         <button class="btn-modal-close" onclick="closeModal()">✕</button>
@@ -181,16 +195,16 @@
       </div>
       <div class="modal-body">
         <div class="fact-card" style="border-left: 4px solid #3b82f6;">
-          <h4>☕ 입점 프랜차이즈 브랜드</h4>
+          <h4>☕ 입점 브랜드</h4>
           <div id="mBrandList"></div>
         </div>
         <div class="fact-card" style="border-left: 4px solid #0284c7;">
-          <h4>🍽️ 푸드코트 메뉴 및 가격표</h4>
+          <h4>🍽️ 메뉴 및 가격표</h4>
           <div class="store-tabs" id="mStoreTabs"></div>
           <div class="menu-cards-grid" id="mMenuGrid"></div>
         </div>
         <div class="fact-card">
-          <h4>⚡ 전기차 충전소 및 주차 시설</h4>
+          <h4>⚡ 주차 및 전기차</h4>
           <div id="evDetailBox" class="ev-box">
             <div id="evHeader" style="font-size: 12px; font-weight: 800; color: #15803d; margin-bottom: 4px;"></div>
             <div id="evOperators" style="margin-bottom: 4px;"></div>
@@ -205,12 +219,12 @@
   </div>
 
   <script>
-    // 인트로
     window.addEventListener('load', function() {
       setTimeout(function() {
         const splash = document.getElementById('splash-screen');
         if (splash) { splash.style.opacity = '0'; setTimeout(() => { splash.style.display = 'none'; }, 500); }
       }, 2000);
+      loadSettings(); // 앱 시작 시 설정값 불러오기
     });
 
     const KAKAO_REST_API_KEY = '9ab57e47f2e219d0972329862be77d25';
@@ -222,7 +236,7 @@
     let markersLayer = L.layerGroup().addTo(map);
     let routeLayersGroup = L.layerGroup().addTo(map);
     let userLocationLayer = L.layerGroup().addTo(map);
-    let arrowLayersGroup = L.layerGroup().addTo(map); // 화살표 레이어 그룹 분리
+    let arrowLayersGroup = L.layerGroup().addTo(map); 
     let foundRoutes = [];
     let currentUserLatLng = null;
     let watchId = null;
@@ -234,6 +248,46 @@
       .then(res => res.json())
       .then(data => { allRestAreas = data; statusBadge.textContent = '내 위치 확인 중...'; initUserLocation(); })
       .catch(err => { statusBadge.textContent = 'JSON 로드 실패'; });
+
+    /* ====== 앱 설정 (로컬 스토리지) ====== */
+    function openSettings() { document.getElementById('settingsOverlay').classList.add('active'); }
+    function closeSettings() { document.getElementById('settingsOverlay').classList.remove('active'); }
+    function handleSettingsClick(e) { if (e.target.id === 'settingsOverlay') closeSettings(); }
+
+    function saveSettings() {
+      const fuel = document.getElementById('fuelSelect').value;
+      const isLight = document.getElementById('themeToggle').checked;
+      localStorage.setItem('pref_fuel', fuel);
+      localStorage.setItem('pref_light', isLight);
+      
+      if (isLight) document.body.classList.add('light-theme');
+      else document.body.classList.remove('light-theme');
+
+      // 활성화된 경로가 있다면 설정에 맞게 마커 즉시 재렌더링
+      if (foundRoutes.length > 0) {
+        const activeBtn = document.querySelector('.route-tab-btn.active');
+        if (activeBtn) {
+          const idx = Array.from(activeBtn.parentNode.children).indexOf(activeBtn);
+          selectActiveRoute(idx);
+        }
+      }
+    }
+
+    function loadSettings() {
+      const fuel = localStorage.getItem('pref_fuel') || 'ALL';
+      const isLight = localStorage.getItem('pref_light') === 'true';
+      document.getElementById('fuelSelect').value = fuel;
+      document.getElementById('themeToggle').checked = isLight;
+      if (isLight) document.body.classList.add('light-theme');
+    }
+
+    function forceAppUpdate() {
+      if ('caches' in window) { caches.keys().then(names => names.forEach(name => caches.delete(name))); }
+      if ('serviceWorker' in navigator) { navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update())); }
+      alert('최신 버전으로 앱을 업데이트합니다.');
+      window.location.href = window.location.pathname + '?v=' + new Date().getTime();
+    }
+    /* ======================================= */
 
     function initUserLocation() {
       if (!navigator.geolocation) { statusBadge.style.display = 'none'; return; }
@@ -257,7 +311,7 @@
     }
     function goToCurrentLocation() { if (currentUserLatLng) { map.setView(currentUserLatLng, 15); } initUserLocation(); }
 
-    /* ====== 자동완성 (Auto-complete) 로직 ====== */
+    /* ====== 자동완성 ====== */
     let startTimeout, endTimeout;
     const startInput = document.getElementById('startInput');
     const endInput = document.getElementById('endInput');
@@ -267,7 +321,6 @@
     startInput.addEventListener('input', (e) => handleAutocomplete(e.target.value, startDropdown, 'start'));
     endInput.addEventListener('input', (e) => handleAutocomplete(e.target.value, endDropdown, 'end'));
 
-    // 입력창 외부 클릭 시 드롭다운 닫기
     document.addEventListener('click', (e) => {
       if (!e.target.closest('.input-wrapper')) {
         startDropdown.style.display = 'none';
@@ -278,61 +331,36 @@
     async function handleAutocomplete(keyword, dropdown, type) {
       clearTimeout(type === 'start' ? startTimeout : endTimeout);
       dropdown.style.display = 'none';
-      
       if (!keyword.trim()) return;
 
       const timeoutId = setTimeout(async () => {
         const results = await searchPlaces(keyword);
         if (results.length > 0) {
-          dropdown.innerHTML = results.map((r, i) => `
-            <li onclick="selectAutocompleteItem('${type}', ${i})">
-              <div class="ac-title">${r.name}</div>
-              <div class="ac-addr">${r.address || '주소 없음'}</div>
-            </li>
-          `).join('');
-          
-          if (type === 'start') window.tempStartResults = results;
-          else window.tempEndResults = results;
-          
+          dropdown.innerHTML = results.map((r, i) => `<li onclick="selectAutocompleteItem('${type}', ${i})"><div class="ac-title">${r.name}</div><div class="ac-addr">${r.address || '주소 없음'}</div></li>`).join('');
+          if (type === 'start') window.tempStartResults = results; else window.tempEndResults = results;
           dropdown.style.display = 'block';
         }
-      }, 400); // 0.4초 딜레이 (Debounce)
+      }, 400);
 
-      if (type === 'start') startTimeout = timeoutId;
-      else endTimeout = timeoutId;
+      if (type === 'start') startTimeout = timeoutId; else endTimeout = timeoutId;
     }
 
     function selectAutocompleteItem(type, index) {
       if (type === 'start') {
         searchStartCoord = window.tempStartResults[index];
-        startInput.value = searchStartCoord.name;
-        lastConfirmedStartText = searchStartCoord.name;
-        startDropdown.style.display = 'none';
+        startInput.value = searchStartCoord.name; lastConfirmedStartText = searchStartCoord.name; startDropdown.style.display = 'none';
       } else {
         searchEndCoord = window.tempEndResults[index];
-        endInput.value = searchEndCoord.name;
-        lastConfirmedEndText = searchEndCoord.name;
-        endDropdown.style.display = 'none';
+        endInput.value = searchEndCoord.name; lastConfirmedEndText = searchEndCoord.name; endDropdown.style.display = 'none';
       }
     }
 
     function swapLocations() {
-      const tempText = startInput.value;
-      startInput.value = endInput.value;
-      endInput.value = tempText;
-
-      const tempCoord = searchStartCoord;
-      searchStartCoord = searchEndCoord;
-      searchEndCoord = tempCoord;
-
-      const tempConfirmed = lastConfirmedStartText;
-      lastConfirmedStartText = lastConfirmedEndText;
-      lastConfirmedEndText = tempConfirmed;
-      
-      startDropdown.style.display = 'none';
-      endDropdown.style.display = 'none';
+      const tempText = startInput.value; startInput.value = endInput.value; endInput.value = tempText;
+      const tempCoord = searchStartCoord; searchStartCoord = searchEndCoord; searchEndCoord = tempCoord;
+      const tempConfirmed = lastConfirmedStartText; lastConfirmedStartText = lastConfirmedEndText; lastConfirmedEndText = tempConfirmed;
+      startDropdown.style.display = 'none'; endDropdown.style.display = 'none';
     }
-    /* ======================================= */
 
     function renderMarkers(items) {
       markersLayer.clearLayers();
@@ -399,9 +427,7 @@
     }
 
     function selectCat(catKey, btn) {
-      document.querySelectorAll('.store-tab-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      renderMenuCards(currentCategories[catKey]);
+      document.querySelectorAll('.store-tab-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); renderMenuCards(currentCategories[catKey]);
     }
     function renderMenuCards(items) { document.getElementById('mMenuGrid').innerHTML = items.map(m => `<div class="food-card"><img src="${defaultImg}" /><div><div class="food-name">${m.name}</div><div class="food-price">${m.price}</div></div></div>`).join(''); }
     function closeModal() { document.getElementById('modalOverlay').classList.remove('active'); }
@@ -443,11 +469,9 @@
       return new Promise((resolve) => {
         placeModalResolve = resolve;
         document.getElementById('placeSelectTitle').textContent = titleText;
-        const list = document.getElementById('placeListContainer');
-        list.innerHTML = '';
+        const list = document.getElementById('placeListContainer'); list.innerHTML = '';
         places.forEach(p => {
-          const item = document.createElement('div');
-          item.className = 'place-item';
+          const item = document.createElement('div'); item.className = 'place-item';
           item.innerHTML = `<div class="place-item-title">${p.name}</div><div class="place-item-addr">${p.address || '주소 정보 없음'}</div>`;
           item.onclick = () => { document.getElementById('placeSelectOverlay').classList.remove('active'); const done = placeModalResolve; placeModalResolve = null; if (done) done(p); };
           list.appendChild(item);
@@ -480,12 +504,8 @@
       const textEnd = endText.value.trim();
       if (!startText || !textEnd) return alert('출발지와 목적지를 모두 입력해 주세요.');
       
-      startDropdown.style.display = 'none';
-      endDropdown.style.display = 'none';
-      closeModal();
-      
-      const btn = document.querySelector('.btn-search');
-      btn.textContent = '...'; btn.disabled = true;
+      startDropdown.style.display = 'none'; endDropdown.style.display = 'none'; closeModal();
+      const btn = document.querySelector('.btn-search'); btn.textContent = '...'; btn.disabled = true;
 
       try {
         if (!(searchStartCoord && lastConfirmedStartText === startText)) {
@@ -505,7 +525,6 @@
           searchEndCoord = chosenEnd; document.getElementById('endInput').value = searchEndCoord.name; lastConfirmedEndText = searchEndCoord.name;
         }
 
-        /* 고속도로 우선 카카오 내비게이션 API 적용 */
         const routeUrl = `https://apis-navi.kakaomobility.com/v1/directions?origin=${searchStartCoord.lng},${searchStartCoord.lat}&destination=${searchEndCoord.lng},${searchEndCoord.lat}&priority=RECOMMEND`;
         const routeRes = await fetch(routeUrl, { headers: { 'Authorization': `KakaoAK ${KAKAO_REST_API_KEY}` } });
 
@@ -515,37 +534,22 @@
         }
 
         const routeData = await routeRes.json();
-
-        if (!routeData.routes || routeData.routes.length === 0) {
-          alert('경로를 찾을 수 없습니다.');
-          btn.textContent = '탐색'; btn.disabled = false; return;
-        }
+        if (!routeData.routes || routeData.routes.length === 0) { alert('경로를 찾을 수 없습니다.'); btn.textContent = '탐색'; btn.disabled = false; return; }
 
         const kakaoRoute = routeData.routes[0];
         const coords = [];
         kakaoRoute.sections.forEach(section => {
           section.roads.forEach(road => {
-            for (let i = 0; i < road.vertexes.length; i += 2) {
-              coords.push([road.vertexes[i+1], road.vertexes[i]]); // 위도, 경도 순으로 삽입
-            }
+            for (let i = 0; i < road.vertexes.length; i += 2) { coords.push([road.vertexes[i+1], road.vertexes[i]]); }
           });
         });
 
-        foundRoutes = [{
-          distance: kakaoRoute.summary.distance,
-          duration: kakaoRoute.summary.duration,
-          geometry: { coordinates: coords }
-        }];
-
+        foundRoutes = [{ distance: kakaoRoute.summary.distance, duration: kakaoRoute.summary.duration, geometry: { coordinates: coords } }];
         setupRouteSelectorBar(foundRoutes);
         selectActiveRoute(0);
 
-      } catch (err) {
-        console.error(err);
-        alert('경로 탐색 중 오류가 발생했습니다.');
-      } finally {
-        btn.textContent = '탐색'; btn.disabled = false;
-      }
+      } catch (err) { console.error(err); alert('경로 탐색 중 오류가 발생했습니다.');
+      } finally { btn.textContent = '탐색'; btn.disabled = false; }
     }
 
     function setupRouteSelectorBar(routes) {
@@ -561,74 +565,53 @@
     function isRightDirection(item, isSouthBound) {
       const dir = (item.direction || '') + (item.name || '');
       if (dir.includes('양방향') || dir.includes('통합')) return true;
-      if (isSouthBound) {
-        if (dir.includes('상행') || dir.includes('서울') || dir.includes('춘천') || dir.includes('일산') || dir.includes('양양') || dir.includes('제천')) return false;
-        return true;
-      } else {
-        if (dir.includes('하행') || dir.includes('부산') || dir.includes('목포') || dir.includes('순천') || dir.includes('창원') || dir.includes('광주')) return false;
-        return true;
-      }
+      if (isSouthBound) { return !(dir.includes('상행') || dir.includes('서울') || dir.includes('춘천') || dir.includes('일산') || dir.includes('양양') || dir.includes('제천')); } 
+      else { return !(dir.includes('하행') || dir.includes('부산') || dir.includes('목포') || dir.includes('순천') || dir.includes('창원') || dir.includes('광주')); }
     }
 
     function selectActiveRoute(targetIdx) {
-      document.querySelectorAll('.route-tab-btn').forEach((b, idx) => {
-        b.classList.toggle('active', idx === targetIdx);
-      });
-
-      routeLayersGroup.clearLayers();
-      arrowLayersGroup.clearLayers(); // 화살표 초기화
+      document.querySelectorAll('.route-tab-btn').forEach((b, idx) => { b.classList.toggle('active', idx === targetIdx); });
+      routeLayersGroup.clearLayers(); arrowLayersGroup.clearLayers();
 
       foundRoutes.forEach((route, idx) => {
-        const latLngs = route.geometry.coordinates; // 카카오 API에서 이미 [lat, lng]로 변환해둠
+        const latLngs = route.geometry.coordinates; 
         const isSelected = (idx === targetIdx);
 
         const poly = L.polyline(latLngs, {
-          color: isSelected ? '#2563eb' : '#64748b', // 선택된 경로를 더 진한 파란색으로 변경
-          weight: isSelected ? 12 : 4,               // 선 굵기를 6에서 12로 대폭 확대
+          color: isSelected ? '#2563eb' : '#64748b', 
+          weight: isSelected ? 12 : 4,
           opacity: isSelected ? 0.9 : 0.4,
           dashArray: isSelected ? null : '5, 5'
         }).addTo(routeLayersGroup);
 
         if (isSelected) {
-          poly.bringToFront();
-          map.fitBounds(poly.getBounds(), { padding: [25, 25] });
+          poly.bringToFront(); map.fitBounds(poly.getBounds(), { padding: [25, 25] });
 
-          // 진행 방향 화살표 그리기 (PolylineDecorator 적용)
           L.polylineDecorator(poly, {
-            patterns: [
-              {
-                offset: 25, 
-                repeat: 80, // 화살표 간격을 100에서 80으로 줄여 방향성 강조
-                symbol: L.Symbol.arrowHead({
-                  pixelSize: 10, // 화살표 크기를 두꺼워진 선 안에 알맞게 들어가도록 조정
-                  polygon: false, 
-                  pathOptions: { stroke: true, weight: 3, color: '#ffffff', opacity: 1 } // 완전한 불투명 흰색 화살표
-                })
-              }
-            ]
+            patterns: [{
+              offset: 25, repeat: 80,
+              symbol: L.Symbol.arrowHead({ pixelSize: 10, polygon: false, pathOptions: { stroke: true, weight: 3, color: '#ffffff', opacity: 1 } })
+            }]
           }).addTo(arrowLayersGroup);
 
           const isSouthBound = (searchStartCoord && searchEndCoord) ? (searchStartCoord.lat > searchEndCoord.lat) : true;
+          const prefFuel = document.getElementById('fuelSelect').value; // 설정된 연료 필터 가져오기
 
           const filtered = allRestAreas.filter(item => {
-            const rLat = parseFloat(item.lat);
-            const rLng = parseFloat(item.lng);
+            const rLat = parseFloat(item.lat); const rLng = parseFloat(item.lng);
             if (isNaN(rLat) || isNaN(rLng)) return false;
+            
+            // 로컬 스토리지 연료 필터 적용
+            if (prefFuel === 'LPG' && !item.has_lpg) return false;
+            if (prefFuel === 'EV' && !item.has_ev) return false;
 
-            const p = [rLat, rLng];
-            let onPath = false;
-
+            const p = [rLat, rLng]; let onPath = false;
             for (let i = 0; i < latLngs.length - 1; i++) {
-              if (distToSegment(p, latLngs[i], latLngs[i + 1]) <= 1.8) {
-                onPath = true;
-                break;
-              }
+              if (distToSegment(p, latLngs[i], latLngs[i + 1]) <= 1.8) { onPath = true; break; }
             }
-
             if (!onPath) return false;
             return isRightDirection(item, isSouthBound);
           });
-
           renderMarkers(filtered);
         }
       });
@@ -637,43 +620,16 @@
     function resetView() {
       closeModal();
       document.getElementById('routeSelectorBar').style.display = 'none';
-      startDropdown.style.display = 'none';
-      endDropdown.style.display = 'none';
-      routeLayersGroup.clearLayers();
-      arrowLayersGroup.clearLayers();
-      markersLayer.clearLayers();
-      document.getElementById('startInput').value = '';
-      document.getElementById('endInput').value = '';
+      startDropdown.style.display = 'none'; endDropdown.style.display = 'none';
+      routeLayersGroup.clearLayers(); arrowLayersGroup.clearLayers(); markersLayer.clearLayers();
+      document.getElementById('startInput').value = ''; document.getElementById('endInput').value = '';
       searchStartCoord = null; searchEndCoord = null;
       lastConfirmedStartText = null; lastConfirmedEndText = null;
       foundRoutes = [];
-      if (currentUserLatLng) map.setView(currentUserLatLng, 15);
-      else map.setView([36.5, 127.8], 8);
-    }
-
-    // [새로 추가] 모바일 캐시 강제 삭제 및 최신화 함수
-    function forceAppUpdate() {
-      // 1. 브라우저 캐시 저장소 완전 비우기
-      if ('caches' in window) {
-        caches.keys().then(names => {
-          names.forEach(name => caches.delete(name));
-        });
-      }
-      
-      // 2. 서비스 워커(PWA 백그라운드 직원) 강제 업데이트
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(registrations => {
-          registrations.forEach(registration => registration.update());
-        });
-      }
-      
-      // 3. 주소창 뒤에 현재 시간을 붙여서 '완전히 새로운 접속'으로 인식하게 만듦
-      alert('최신 버전으로 앱을 업데이트합니다.');
-      window.location.href = window.location.pathname + '?v=' + new Date().getTime();
+      if (currentUserLatLng) map.setView(currentUserLatLng, 15); else map.setView([36.5, 127.8], 8);
     }
   </script>
   
-  <!-- 4. PWA 서비스 워커 등록 스크립트 추가 -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
