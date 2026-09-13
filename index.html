@@ -600,12 +600,13 @@
       const badge = document.getElementById('mBadge');
       badge.textContent = `혼잡도: ${item.crowded_level || '보통'}`; badge.className = `badge badge-${item.crowded_level || '보통'}`;
 
-      // 1. 휘발유 정보 매핑
+     // 1. 휘발유 정보 매핑
       const gasBadge = document.getElementById('gasBadge');
       const gasVal = document.getElementById('gasPriceVal');
       if (item.gas_price) {
         gasBadge.textContent = '운영중'; gasBadge.className = 'fuel-status-badge status-on';
-        gasVal.textContent = `${Number(item.gas_price).toLocaleString()}원`;
+        const p = Number(String(item.gas_price).replace(/,/g, ''));
+        gasVal.textContent = isNaN(p) ? item.gas_price : `${p.toLocaleString()}원`;
       } else if (item.has_gas) {
         gasBadge.textContent = '운영중'; gasBadge.className = 'fuel-status-badge status-on';
         gasVal.textContent = '가격 확인중';
@@ -619,7 +620,8 @@
       const dieselVal = document.getElementById('dieselPriceVal');
       if (item.diesel_price) {
         dieselBadge.textContent = '운영중'; dieselBadge.className = 'fuel-status-badge status-on';
-        dieselVal.textContent = `${Number(item.diesel_price).toLocaleString()}원`;
+        const p = Number(String(item.diesel_price).replace(/,/g, ''));
+        dieselVal.textContent = isNaN(p) ? item.diesel_price : `${p.toLocaleString()}원`;
       } else if (item.has_gas) {
         dieselBadge.textContent = '운영중'; dieselBadge.className = 'fuel-status-badge status-on';
         dieselVal.textContent = '가격 확인중';
@@ -633,7 +635,8 @@
       const lpgVal = document.getElementById('lpgPriceVal');
       if (item.lpg_price) {
         lpgBadge.textContent = '운영중'; lpgBadge.className = 'fuel-status-badge status-on';
-        lpgVal.textContent = `${Number(item.lpg_price).toLocaleString()}원`;
+        const p = Number(String(item.lpg_price).replace(/,/g, ''));
+        lpgVal.textContent = isNaN(p) ? item.lpg_price : `${p.toLocaleString()}원`;
       } else if (item.has_lpg) {
         lpgBadge.textContent = '운영중'; lpgBadge.className = 'fuel-status-badge status-on';
         lpgVal.textContent = 'LPG 가능';
