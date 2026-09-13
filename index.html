@@ -149,6 +149,8 @@
       </div>
       <button class="btn-search" onclick="handleSearchRoute()">탐색</button>
       <button class="btn-reset" onclick="resetView()">초기화</button>
+      <!-- 강제 업데이트 버튼 추가 -->
+      <button class="btn-reset" style="background:#059669; border-color:#047857; padding:7px 8px; font-size:13px;" onclick="forceAppUpdate()" title="최신 버전으로 업데이트">🔄</button>
     </div>
   </div>
 
@@ -647,6 +649,27 @@
       foundRoutes = [];
       if (currentUserLatLng) map.setView(currentUserLatLng, 15);
       else map.setView([36.5, 127.8], 8);
+    }
+
+    // [새로 추가] 모바일 캐시 강제 삭제 및 최신화 함수
+    function forceAppUpdate() {
+      // 1. 브라우저 캐시 저장소 완전 비우기
+      if ('caches' in window) {
+        caches.keys().then(names => {
+          names.forEach(name => caches.delete(name));
+        });
+      }
+      
+      // 2. 서비스 워커(PWA 백그라운드 직원) 강제 업데이트
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+          registrations.forEach(registration => registration.update());
+        });
+      }
+      
+      // 3. 주소창 뒤에 현재 시간을 붙여서 '완전히 새로운 접속'으로 인식하게 만듦
+      alert('최신 버전으로 앱을 업데이트합니다.');
+      window.location.href = window.location.pathname + '?v=' + new Date().getTime();
     }
   </script>
   
