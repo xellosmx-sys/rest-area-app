@@ -6,53 +6,72 @@
   <title>고속도로 휴게소 가이드</title>
 
   <link rel="manifest" href="./manifest.json?v=2">
-
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.js"></script>
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Pretendard", Roboto, sans-serif; }
-    body { overflow: hidden; background: #0f172a; transition: background 0.3s; }
     
-    /* 라이트 모드 (화면 밝게) 테마 */
-    body.light-theme { background: #f8fafc; }
-    body.light-theme #navbar { background: #ffffff; color: #1e293b; border-bottom: 1px solid #e2e8f0; }
-    body.light-theme .input-box { background: #f1f5f9; color: #1e293b; border-color: #cbd5e1; }
-    body.light-theme .btn-swap { background: #e2e8f0; border-color: #cbd5e1; color: #2563eb; }
-    body.light-theme #splash-screen { background-color: #f8fafc; color: #1e293b; }
-    body.light-theme .rest-tag { background: #ffffff; color: #2563eb; border-color: #2563eb; }
+    /* 기본 라이트 테마 */
+    body { overflow: hidden; background: #f8fafc; color: #1e293b; transition: background 0.3s; }
+    #splash-screen { background-color: #f8fafc; color: #1e293b; }
+    #splash-screen p { color: #64748b; }
+    #navbar { background: #ffffff; color: #1e293b; border-bottom: 1px solid #e2e8f0; }
+    .input-box { background: #f1f5f9; color: #1e293b; border: 1px solid #cbd5e1; }
+    .btn-swap { background: #e2e8f0; border: 1px solid #cbd5e1; color: #2563eb; }
+    .btn-settings { background: #e2e8f0; border: 1px solid #cbd5e1; color: #1e293b; }
+    .rest-tag { background: #ffffff; color: #2563eb; border: 1px solid #2563eb; }
+    .btn-location, .btn-home { background: #ffffff; border: 2px solid #38bdf8; color: #38bdf8; }
 
-    #splash-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: #0f172a; color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; transition: opacity 0.5s ease; }
+    /* 다크 테마 (설정 시 적용) */
+    body.dark-theme { background: #0f172a; color: white; }
+    body.dark-theme #splash-screen { background-color: #0f172a; color: white; }
+    body.dark-theme #splash-screen p { color: #94a3b8; }
+    body.dark-theme #navbar { background: #1e293b; border-bottom: none; color: white; }
+    body.dark-theme .input-box { background: #0f172a; color: white; border: 1px solid #475569; }
+    body.dark-theme .btn-swap { background: #334155; border: 1px solid #475569; color: #38bdf8; }
+    body.dark-theme .btn-settings { background: #334155; border: 1px solid #475569; color: white; }
+    body.dark-theme .rest-tag { background: #0f172a; color: #38bdf8; border: 1px solid #38bdf8; }
+    body.dark-theme .btn-location, body.dark-theme .btn-home { background: #0f172a; border: 2px solid #38bdf8; }
+    
+    /* 지도 다크 모드 반전 필터 */
+    body.dark-theme .leaflet-tile-pane { filter: invert(100%) hue-rotate(180deg) brightness(85%) contrast(90%); }
+
+    #splash-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; transition: opacity 0.5s ease; }
     #splash-screen h1 { font-size: 32px; font-weight: 900; color: #38bdf8; margin-bottom: 10px; }
-    #splash-screen p { font-size: 14px; color: #94a3b8; }
-
-    #navbar { height: 56px; background: #1e293b; color: white; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 1000; position: relative; gap: 4px; }
+    
+    #navbar { height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 1000; position: relative; gap: 4px; }
     .search-container { display: flex; gap: 4px; align-items: center; width: 100%; justify-content: space-between; }
     
     .input-wrapper { position: relative; width: 28%; flex-grow: 1; }
-    .input-box { padding: 7px 6px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: white; font-size: 13px; width: 100%; outline: none; text-align: center; }
+    .input-box { padding: 7px 6px; border-radius: 6px; font-size: 13px; width: 100%; outline: none; text-align: center; }
 
-    .autocomplete-dropdown { position: absolute; top: 100%; left: 0; width: 180%; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; max-height: 220px; overflow-y: auto; z-index: 3000; list-style: none; margin-top: 4px; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+    .autocomplete-dropdown { position: absolute; top: 100%; left: 0; width: 180%; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; max-height: 220px; overflow-y: auto; z-index: 3000; list-style: none; margin-top: 4px; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
     .autocomplete-dropdown li { padding: 10px; border-bottom: 1px solid #e2e8f0; cursor: pointer; color: #0f172a; text-align: left; }
     .autocomplete-dropdown li:hover { background: #e0f2fe; }
     .ac-title { font-size: 12px; font-weight: 800; color: #1e293b; margin-bottom: 2px; }
     .ac-addr { font-size: 10px; color: #64748b; }
 
-    .btn-swap { background: #334155; border: 1px solid #475569; color: #38bdf8; width: 32px; height: 32px; border-radius: 6px; font-size: 15px; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+    .btn-swap { width: 32px; height: 32px; border-radius: 6px; font-size: 15px; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
     .btn-search { padding: 7px 12px; border-radius: 6px; border: none; font-weight: 700; font-size: 13px; background: #2563eb; color: white; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
-    .btn-settings { padding: 5px; border-radius: 6px; border: 1px solid #475569; background: #334155; color: white; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex-shrink: 0; }
+    .btn-settings { padding: 5px; border-radius: 6px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex-shrink: 0; }
 
-    #statusBadge { position: absolute; bottom: 20px; left: 15px; z-index: 1100; background: rgba(15, 23, 42, 0.9); border: 1px solid #38bdf8; color: #38bdf8; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; }
-    .btn-location { position: absolute; bottom: 25px; right: 15px; z-index: 1100; width: 46px; height: 46px; border-radius: 50%; background: #0f172a; border: 2px solid #38bdf8; color: #38bdf8; font-size: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
-    #routeSelectorBar { display: none; position: absolute; top: 64px; left: 50%; transform: translateX(-50%); z-index: 1000; background: rgba(15, 23, 42, 0.92); backdrop-filter: blur(6px); padding: 5px 8px; border-radius: 20px; border: 1px solid #38bdf8; box-shadow: 0 4px 15px rgba(0,0,0,0.4); gap: 6px; max-width: 95vw; overflow-x: auto; }
-    .route-tab-btn { padding: 5px 10px; border-radius: 14px; border: none; font-size: 11px; font-weight: 700; background: transparent; color: #94a3b8; cursor: pointer; white-space: nowrap; }
+    #statusBadge { position: absolute; bottom: 20px; left: 15px; z-index: 1100; background: rgba(15, 23, 42, 0.9); border: 1px solid #38bdf8; color: #38bdf8; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; display: none; }
+    
+    .btn-location, .btn-home { position: absolute; right: 15px; z-index: 1100; width: 46px; height: 46px; border-radius: 50%; font-size: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    .btn-location { bottom: 25px; }
+    .btn-home { bottom: 80px; } /* 위치 버튼 위에 배치 */
+
+    #routeSelectorBar { display: none; position: absolute; top: 64px; left: 50%; transform: translateX(-50%); z-index: 1000; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(6px); padding: 5px 8px; border-radius: 20px; border: 1px solid #38bdf8; box-shadow: 0 4px 15px rgba(0,0,0,0.2); gap: 6px; max-width: 95vw; overflow-x: auto; }
+    body.dark-theme #routeSelectorBar { background: rgba(15, 23, 42, 0.92); }
+    .route-tab-btn { padding: 5px 10px; border-radius: 14px; border: none; font-size: 11px; font-weight: 700; background: transparent; color: #64748b; cursor: pointer; white-space: nowrap; }
     .route-tab-btn.active { background: #2563eb; color: white; box-shadow: 0 2px 6px rgba(37,99,235,0.5); }
 
     #map { height: calc(100vh - 56px); width: 100vw; z-index: 1; }
 
     .rest-unified-marker { cursor: pointer !important; display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); }
-    .rest-tag { background: #0f172a; color: #38bdf8; border: 1px solid #38bdf8; border-radius: 6px; padding: 3px 8px; font-size: 11px; font-weight: 800; white-space: nowrap; box-shadow: 0 3px 6px rgba(0,0,0,0.5); }
+    .rest-tag { border-radius: 6px; padding: 3px 8px; font-size: 11px; font-weight: 800; white-space: nowrap; box-shadow: 0 3px 6px rgba(0,0,0,0.3); }
     .rest-dot { width: 12px; height: 12px; background: #0284c7; border: 2px solid #ffffff; border-radius: 50%; margin-top: 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.4); }
 
     .overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); z-index: 2500; justify-content: center; align-items: center; }
@@ -64,7 +83,7 @@
     .place-item { padding: 10px 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; cursor: pointer; text-align: left; }
 
     #modalOverlay { align-items: flex-end; z-index: 2000; }
-    .modal-content { background: #ffffff; width: 100%; max-height: 85vh; border-radius: 20px 20px 0 0; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 -10px 25px rgba(0,0,0,0.4); }
+    .modal-content { background: #ffffff; width: 100%; max-height: 85vh; border-radius: 20px 20px 0 0; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 -10px 25px rgba(0,0,0,0.4); color: #1e293b; }
     .modal-header-banner { position: relative; padding: 16px 20px; background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%); color: white; border-bottom: 3px solid #38bdf8; }
     .btn-modal-close { position: absolute; top: 14px; right: 14px; width: 32px; height: 32px; border-radius: 50%; border: none; background: rgba(255,255,255,0.2); color: white; font-size: 16px; cursor: pointer; font-weight: bold; }
     .modal-body { padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
@@ -72,7 +91,7 @@
     .fact-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; }
     .fact-card h4 { font-size: 14px; color: #1e293b; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
     .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 13px; color: #334155; font-weight: 600; }
-    .setting-row select { padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px; outline: none; }
+    .setting-row select, .setting-row input[type="text"] { padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px; outline: none; background: white; color: #1e293b;}
     
     .badge { display: inline-block; padding: 3px 6px; font-size: 11px; font-weight: 700; border-radius: 5px; color: white; margin-bottom: 4px; }
     .badge-혼잡 { background: #ef4444; } .badge-보통 { background: #f59e0b; } .badge-원활 { background: #10b981; }
@@ -101,7 +120,7 @@
 <body>
 
   <div id="splash-screen">
-    <h1>쉬어갈카<span style="font-size: 16px; color: #94a3b8; margin-left: 4px;">car</span></h1>
+    <h1>쉬어갈카<span style="font-size: 16px; margin-left: 4px;">car</span></h1>
     <p>고속도로 휴게소의 모든 것</p>
   </div>
 
@@ -117,12 +136,12 @@
         <ul id="endDropdown" class="autocomplete-dropdown"></ul>
       </div>
       <button class="btn-search" onclick="handleSearchRoute()">탐색</button>
-      <!-- 설정 버튼으로 교체 -->
       <button class="btn-settings" onclick="openSettings()">⚙️</button>
     </div>
   </div>
 
   <div id="statusBadge">준비 중...</div>
+  <button class="btn-home" onclick="goHome()" title="내 집으로 가기">🏠</button>
   <button class="btn-location" onclick="goToCurrentLocation()" title="내 위치로 이동">🎯</button>
   <div id="routeSelectorBar"></div>
   <div id="map"></div>
@@ -137,7 +156,7 @@
       <div class="modal-body">
         
         <div class="fact-card" style="border-left: 4px solid #10b981;">
-          <h4>🚙 맞춤 정보</h4>
+          <h4>🚙 맞춤 정보 및 목적지</h4>
           <div class="setting-row">
             <span>내 차 연료 필터</span>
             <select id="fuelSelect" onchange="saveSettings()">
@@ -146,12 +165,20 @@
               <option value="EV">전기차 충전소 우선</option>
             </select>
           </div>
+          <div class="setting-row">
+            <span>🏠 내 집 주소 저장</span>
+            <input type="text" id="homeInput" placeholder="예: 서울시 강남구" style="width: 140px;" onchange="saveSettings()" />
+          </div>
+          <div class="setting-row" style="margin-bottom: 0;">
+            <span>🍜 선호 음식(메뉴) 강조</span>
+            <input type="text" id="foodInput" placeholder="예: 우동" style="width: 140px;" onchange="saveSettings()" />
+          </div>
         </div>
 
         <div class="fact-card" style="border-left: 4px solid #3b82f6;">
           <h4>📱 화면 설정</h4>
-          <div class="setting-row">
-            <span>밝은 테마 (라이트 모드)</span>
+          <div class="setting-row" style="margin-bottom: 0;">
+            <span>다크 모드 (야간 주행용 지도)</span>
             <label class="switch">
               <input type="checkbox" id="themeToggle" onchange="saveSettings()">
               <span class="slider"></span>
@@ -165,7 +192,7 @@
             <span>검색 기록 및 지도 초기화</span>
             <button class="btn-search" style="background:#64748b;" onclick="resetView(); closeSettings();">초기화 실행</button>
           </div>
-          <div class="setting-row">
+          <div class="setting-row" style="margin-bottom: 0;">
             <span>최신 정보 강제 업데이트</span>
             <button class="btn-search" style="background:#059669;" onclick="forceAppUpdate()">🔄 업데이트</button>
           </div>
@@ -224,7 +251,7 @@
         const splash = document.getElementById('splash-screen');
         if (splash) { splash.style.opacity = '0'; setTimeout(() => { splash.style.display = 'none'; }, 500); }
       }, 2000);
-      loadSettings(); // 앱 시작 시 설정값 불러오기
+      loadSettings(); 
     });
 
     const KAKAO_REST_API_KEY = '9ab57e47f2e219d0972329862be77d25';
@@ -246,8 +273,8 @@
 
     fetch('rest_areas_master.json?v=' + Date.now(), { cache: 'no-store' })
       .then(res => res.json())
-      .then(data => { allRestAreas = data; statusBadge.textContent = '내 위치 확인 중...'; initUserLocation(); })
-      .catch(err => { statusBadge.textContent = 'JSON 로드 실패'; });
+      .then(data => { allRestAreas = data; statusBadge.textContent = '내 위치 확인 중...'; statusBadge.style.display = 'block'; initUserLocation(); })
+      .catch(err => { statusBadge.textContent = 'JSON 로드 실패'; statusBadge.style.display = 'block'; });
 
     /* ====== 앱 설정 (로컬 스토리지) ====== */
     function openSettings() { document.getElementById('settingsOverlay').classList.add('active'); }
@@ -256,14 +283,18 @@
 
     function saveSettings() {
       const fuel = document.getElementById('fuelSelect').value;
-      const isLight = document.getElementById('themeToggle').checked;
-      localStorage.setItem('pref_fuel', fuel);
-      localStorage.setItem('pref_light', isLight);
+      const isDark = document.getElementById('themeToggle').checked;
+      const homeAddr = document.getElementById('homeInput').value.trim();
+      const prefFood = document.getElementById('foodInput').value.trim();
       
-      if (isLight) document.body.classList.add('light-theme');
-      else document.body.classList.remove('light-theme');
+      localStorage.setItem('pref_fuel', fuel);
+      localStorage.setItem('pref_dark', isDark);
+      localStorage.setItem('pref_home', homeAddr);
+      localStorage.setItem('pref_food', prefFood);
+      
+      if (isDark) document.body.classList.add('dark-theme');
+      else document.body.classList.remove('dark-theme');
 
-      // 활성화된 경로가 있다면 설정에 맞게 마커 즉시 재렌더링
       if (foundRoutes.length > 0) {
         const activeBtn = document.querySelector('.route-tab-btn.active');
         if (activeBtn) {
@@ -275,10 +306,17 @@
 
     function loadSettings() {
       const fuel = localStorage.getItem('pref_fuel') || 'ALL';
-      const isLight = localStorage.getItem('pref_light') === 'true';
+      const isDark = localStorage.getItem('pref_dark') === 'true'; // 기본값 false(라이트 모드)
+      const homeAddr = localStorage.getItem('pref_home') || '';
+      const prefFood = localStorage.getItem('pref_food') || '';
+      
       document.getElementById('fuelSelect').value = fuel;
-      document.getElementById('themeToggle').checked = isLight;
-      if (isLight) document.body.classList.add('light-theme');
+      document.getElementById('themeToggle').checked = isDark;
+      document.getElementById('homeInput').value = homeAddr;
+      document.getElementById('foodInput').value = prefFood;
+      
+      if (isDark) document.body.classList.add('dark-theme');
+      else document.body.classList.remove('dark-theme');
     }
 
     function forceAppUpdate() {
@@ -286,6 +324,22 @@
       if ('serviceWorker' in navigator) { navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update())); }
       alert('최신 버전으로 앱을 업데이트합니다.');
       window.location.href = window.location.pathname + '?v=' + new Date().getTime();
+    }
+    
+    // [기능 1] 집으로 바로가기
+    function goHome() {
+      const homeAddr = localStorage.getItem('pref_home');
+      if (!homeAddr) return alert('설정 창(⚙️)에서 내 집 주소를 먼저 등록해주세요.');
+      if (!currentUserLatLng) return alert('현재 위치를 파악 중입니다. 잠시 후 다시 시도해주세요.');
+
+      // 현 위치를 출발지로 강제 맵핑
+      searchStartCoord = { name: '현위치', lat: currentUserLatLng[0], lng: currentUserLatLng[1] };
+      document.getElementById('startInput').value = '현위치';
+      lastConfirmedStartText = '현위치';
+      
+      // 도착지는 등록된 집 주소 텍스트로 채우고 탐색 실행
+      document.getElementById('endInput').value = homeAddr;
+      handleSearchRoute();
     }
     /* ======================================= */
 
@@ -364,10 +418,23 @@
 
     function renderMarkers(items) {
       markersLayer.clearLayers();
+      const prefFood = localStorage.getItem('pref_food') || ''; // [기능 2] 설정된 음식 키워드 가져오기
+      
       items.forEach(item => {
         const lat = parseFloat(item.lat); const lng = parseFloat(item.lng);
         if (isNaN(lat) || isNaN(lng)) return;
-        const customIcon = L.divIcon({ className: 'rest-unified-marker', html: `<div class="rest-tag">${item.name}</div><div class="rest-dot"></div>`, iconSize: [100, 36], iconAnchor: [50, 36] });
+        
+        // [기능 2] 해당 휴게소 메뉴 리스트에 선호 음식이 포함되어 있는지 검사
+        let isFavFood = false;
+        if (prefFood && item.menu_list) {
+          isFavFood = item.menu_list.some(m => m.name && m.name.includes(prefFood));
+        }
+        
+        // 선호 음식이 있다면 빨간색(ef4444)으로 마커 스타일 덮어쓰기
+        const customStyle = isFavFood ? 'background: #ef4444; color: white; border-color: #ef4444;' : '';
+        const iconHtml = `<div class="rest-tag" style="${customStyle}">${item.name}${isFavFood ? ' ⭐' : ''}</div><div class="rest-dot"></div>`;
+        
+        const customIcon = L.divIcon({ className: 'rest-unified-marker', html: iconHtml, iconSize: [100, 36], iconAnchor: [50, 36] });
         L.marker([lat, lng], { icon: customIcon }).addTo(markersLayer).on('click', () => openModal(item));
       });
     }
@@ -511,9 +578,15 @@
         if (!(searchStartCoord && lastConfirmedStartText === startText)) {
           const startResults = await searchPlaces(startText);
           if (startResults.length === 0) { alert(`출발지 '${startText}' 위치를 찾지 못했습니다.`); btn.textContent = '탐색'; btn.disabled = false; return; }
-          const chosenStart = await promptPlaceSelection(`출발지 선택: ${startText}`, startResults);
-          if (!chosenStart) { btn.textContent = '탐색'; btn.disabled = false; return; }
-          searchStartCoord = chosenStart; document.getElementById('startInput').value = searchStartCoord.name; lastConfirmedStartText = searchStartCoord.name;
+          // 단일 결과이거나 강제 할당된 현위치인 경우 팝업 없이 진행
+          if(startResults.length === 1 || startText === '현위치') {
+             searchStartCoord = startResults[0] || searchStartCoord;
+          } else {
+             const chosenStart = await promptPlaceSelection(`출발지 선택: ${startText}`, startResults);
+             if (!chosenStart) { btn.textContent = '탐색'; btn.disabled = false; return; }
+             searchStartCoord = chosenStart; 
+          }
+          document.getElementById('startInput').value = searchStartCoord.name; lastConfirmedStartText = searchStartCoord.name;
           await new Promise(r => setTimeout(r, 200));
         }
 
@@ -595,13 +668,12 @@
           }).addTo(arrowLayersGroup);
 
           const isSouthBound = (searchStartCoord && searchEndCoord) ? (searchStartCoord.lat > searchEndCoord.lat) : true;
-          const prefFuel = document.getElementById('fuelSelect').value; // 설정된 연료 필터 가져오기
+          const prefFuel = document.getElementById('fuelSelect').value; 
 
           const filtered = allRestAreas.filter(item => {
             const rLat = parseFloat(item.lat); const rLng = parseFloat(item.lng);
             if (isNaN(rLat) || isNaN(rLng)) return false;
             
-            // 로컬 스토리지 연료 필터 적용
             if (prefFuel === 'LPG' && !item.has_lpg) return false;
             if (prefFuel === 'EV' && !item.has_ev) return false;
 
