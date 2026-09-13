@@ -110,6 +110,18 @@
     .food-name { font-size: 13px; font-weight: 800; color: #1e293b; }
     body.dark-theme .food-name { color: #f8fafc; }
     .food-price { font-size: 13px; font-weight: 800; color: #d97706; margin-top: 2px; }
+
+    /* 에너지 & 주유 그리드 스타일 */
+    .fuel-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 10px; }
+    .fuel-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 3px; }
+    body.dark-theme .fuel-card { background: #0f172a; border-color: #334155; }
+    .fuel-title { font-size: 11px; font-weight: 700; color: #64748b; display: flex; justify-content: space-between; align-items: center; }
+    body.dark-theme .fuel-title { color: #94a3b8; }
+    .fuel-val { font-size: 14px; font-weight: 900; color: #1e293b; }
+    body.dark-theme .fuel-val { color: #f8fafc; }
+    .fuel-status-badge { font-size: 10px; padding: 1px 5px; border-radius: 4px; font-weight: 700; }
+    .status-on { background: #dcfce7; color: #166534; }
+    .status-off { background: #f1f5f9; color: #94a3b8; }
     
     .ev-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px; margin-top: 6px; }
     body.dark-theme .ev-box { background: #064e3b; border-color: #047857; }
@@ -146,7 +158,6 @@
       </div>
       <button class="btn-search" onclick="handleSearchRoute()">탐색</button>
       
-      <!-- 상단으로 이동한 집 아이콘과 설정 버튼 -->
       <button class="btn-settings" onclick="promptHomeAction()" title="내 집 주소 불러오기">🏠</button>
       <button class="btn-settings" onclick="openSettings()" title="앱 설정">⚙️</button>
     </div>
@@ -184,6 +195,7 @@
             <span>내 차 연료 필터</span>
             <select id="fuelSelect">
               <option value="ALL">모두 보기 (기본)</option>
+              <option value="GAS">주유소(휘발유/경유) 우선</option>
               <option value="LPG">LPG 충전소 우선</option>
               <option value="EV">전기차 충전소 우선</option>
             </select>
@@ -199,7 +211,6 @@
             <span>🍜 선호 음식(메뉴) 강조</span>
             <input type="text" id="foodInput" class="input-box" placeholder="예: 우동" style="width: 150px; text-align: left;" />
           </div>
-          <!-- 💾 명시적 저장 버튼 추가 -->
           <div class="setting-row" style="justify-content: flex-end; margin-top: 10px; margin-bottom: 0;">
             <button class="btn-search" style="background:#2563eb;" onclick="saveSettingsBtn()">💾 설정 저장</button>
           </div>
@@ -228,13 +239,13 @@
           </div>
         </div>
 
-        <!-- 👨‍💻 개발자 정보 카드 추가 -->
         <div class="fact-card" style="border-left: 4px solid #8b5cf6;">
           <h4>👨‍💻 개발자 프로필</h4>
           <div class="dev-text">
-            <b>• 개발자:</b> L.H.H<br>
-            <b>• Mail:</b> xellosmx@naver.com<br>
-           
+            <b>• 소속:</b> 한국폴리텍대학 충주캠퍼스 AI드론과 재학 (91년생)<br>
+            <b>• 이력:</b> 반도체 장비유지보수 실무 (7년 6개월), 용접 실무 (1년)<br>
+            <b>• 자격:</b> 용접산업기사, 특수용접기능사, 가스기능사 보유<br>
+            <b>• 관심사:</b> 3D 프린팅(Bambu Lab), 드론 공간정보 매핑, 주식 실전 투자
           </div>
         </div>
 
@@ -252,6 +263,7 @@
     </div>
   </div>
 
+  <!-- 휴게소 상세 모달 -->
   <div id="modalOverlay" class="overlay" onclick="handleOverlayClick(event)">
     <div class="modal-content" id="modalContent">
       <div class="modal-header-banner">
@@ -262,32 +274,74 @@
       </div>
       <div class="modal-body">
         
-        <!-- ⛽ 유가 정보 표시 영역 -->
-        <div id="gasBox" class="ev-box" style="background:#fff7ed; border-color:#fed7aa; display:none;">
-          <div style="font-size: 12px; font-weight: 800; color: #c2410c; margin-bottom: 4px;">⛽ 주유소 유가정보</div>
-          <div id="gasPrices" style="font-size: 12px; color: #9a3412; font-weight: bold;"></div>
+        <!-- ⛽ 종합 에너지 & 주유소 유가 정보 영역 -->
+        <div class="fact-card" style="border-left: 4px solid #f97316;">
+          <h4>⛽ 주유소 및 충전소 안내</h4>
+          
+          <div class="fuel-grid">
+            <!-- 휘발유 -->
+            <div class="fuel-card">
+              <div class="fuel-title">
+                <span>🔴 휘발유</span>
+                <span id="gasBadge" class="fuel-status-badge status-off">확인중</span>
+              </div>
+              <div id="gasPriceVal" class="fuel-val">-</div>
+            </div>
+
+            <!-- 경유 -->
+            <div class="fuel-card">
+              <div class="fuel-title">
+                <span>🔵 경유 (디젤)</span>
+                <span id="dieselBadge" class="fuel-status-badge status-off">확인중</span>
+              </div>
+              <div id="dieselPriceVal" class="fuel-val">-</div>
+            </div>
+
+            <!-- LPG -->
+            <div class="fuel-card">
+              <div class="fuel-title">
+                <span>🟠 LPG 충전소</span>
+                <span id="lpgBadge" class="fuel-status-badge status-off">확인중</span>
+              </div>
+              <div id="lpgPriceVal" class="fuel-val">-</div>
+            </div>
+
+            <!-- 전기차 충전소 -->
+            <div class="fuel-card">
+              <div class="fuel-title">
+                <span>⚡ 전기차 (EV)</span>
+                <span id="evBadge" class="fuel-status-badge status-off">확인중</span>
+              </div>
+              <div id="evSummaryVal" class="fuel-val">-</div>
+            </div>
+          </div>
+
+          <!-- 전기차 세부 스펙 박스 (운영사 및 출력) -->
+          <div id="evDetailBox" class="ev-box" style="display:none; margin-top:6px;">
+            <div id="evHeader" style="font-size: 12px; font-weight: 800; color: #15803d; margin-bottom: 4px;"></div>
+            <div id="evOperators" style="margin-bottom: 4px;"></div>
+            <div id="evOutputs" style="font-size: 11px; color: #166534;"></div>
+          </div>
         </div>
 
         <div class="fact-card" style="border-left: 4px solid #3b82f6;">
           <h4>☕ 입점 브랜드</h4>
           <div id="mBrandList"></div>
         </div>
+        
         <div class="fact-card" style="border-left: 4px solid #0284c7;">
           <h4>🍽️ 메뉴 및 가격표</h4>
           <div class="store-tabs" id="mStoreTabs"></div>
           <div class="menu-cards-grid" id="mMenuGrid"></div>
         </div>
+        
         <div class="fact-card">
-          <h4>⚡ 주차 및 전기차</h4>
-          <div id="evDetailBox" class="ev-box">
-            <div id="evHeader" style="font-size: 12px; font-weight: 800; color: #15803d; margin-bottom: 4px;"></div>
-            <div id="evOperators" style="margin-bottom: 4px;"></div>
-            <div id="evOutputs" style="font-size: 11px; color: #166534;"></div>
-          </div>
-          <div style="font-size: 12px; margin-top: 8px;">
-            🅿️ 총 주차: <b id="mTotalPark">-</b>대 (소형 <span id="mSmallPark">-</span> / 대형 <span id="mLargePark">-</span>)
+          <h4>🅿️ 주차 시설</h4>
+          <div style="font-size: 12px; margin-top: 2px;">
+            총 주차면수: <b id="mTotalPark">-</b>대 (소형 <span id="mSmallPark">-</span> / 대형 <span id="mLargePark">-</span>)
           </div>
         </div>
+
       </div>
     </div>
   </div>
@@ -363,7 +417,7 @@
 
     function loadSettings() {
       const fuel = localStorage.getItem('pref_fuel') || 'ALL';
-      const isDark = localStorage.getItem('pref_dark') === 'true'; // 기본값 라이트
+      const isDark = localStorage.getItem('pref_dark') === 'true'; 
       const homeAddr = localStorage.getItem('pref_home') || '';
       const prefFood = localStorage.getItem('pref_food') || '';
       
@@ -388,7 +442,6 @@
       window.location.href = window.location.pathname + '?v=' + new Date().getTime();
     }
     
-    // [기능 1] 상단 집 아이콘 클릭 시 팝업 띄우기
     function promptHomeAction() {
       const homeAddr = localStorage.getItem('pref_home');
       if (!homeAddr) {
@@ -399,7 +452,6 @@
       document.getElementById('homeActionOverlay').classList.add('active');
     }
 
-    // 팝업에서 출발/도착 선택 처리
     function setHomeAs(type) {
       document.getElementById('homeActionOverlay').classList.remove('active');
       const homeAddr = localStorage.getItem('pref_home');
@@ -414,7 +466,6 @@
         lastConfirmedEndText = null;
       }
     }
-    /* ======================================= */
 
     function initUserLocation() {
       if (!navigator.geolocation) { statusBadge.style.display = 'none'; return; }
@@ -542,28 +593,85 @@
     }
 
     let currentCategories = {};
+
+    /* ====== 휴게소 상세 모달 열기 (종합 연료 정보 탑재) ====== */
     function openModal(item) {
       document.getElementById('mTitle').textContent = `${item.name} (${item.direction || ''})`;
       document.getElementById('mRoute').textContent = `${item.route_name || '고속도로'}`;
       const badge = document.getElementById('mBadge');
       badge.textContent = `혼잡도: ${item.crowded_level || '보통'}`; badge.className = `badge badge-${item.crowded_level || '보통'}`;
 
-      // [주유소 유가 정보 렌더링 로직]
-      const gasBox = document.getElementById('gasBox');
-      if (item.gas_price || item.diesel_price || item.lpg_price) {
-        gasBox.style.display = 'block';
-        let priceText = [];
-        if(item.gas_price) priceText.push(`휘발유: ${item.gas_price}원`);
-        if(item.diesel_price) priceText.push(`경유: ${item.diesel_price}원`);
-        if(item.lpg_price) priceText.push(`LPG: ${item.lpg_price}원`);
-        document.getElementById('gasPrices').textContent = priceText.join(' / ');
+      // 1. 휘발유 정보 매핑
+      const gasBadge = document.getElementById('gasBadge');
+      const gasVal = document.getElementById('gasPriceVal');
+      if (item.gas_price) {
+        gasBadge.textContent = '운영중'; gasBadge.className = 'fuel-status-badge status-on';
+        gasVal.textContent = `${Number(item.gas_price).toLocaleString()}원`;
+      } else if (item.has_gas) {
+        gasBadge.textContent = '운영중'; gasBadge.className = 'fuel-status-badge status-on';
+        gasVal.textContent = '가격 확인중';
       } else {
-        gasBox.style.display = 'none';
+        gasBadge.textContent = '없음'; gasBadge.className = 'fuel-status-badge status-off';
+        gasVal.textContent = '-';
       }
 
+      // 2. 경유 (디젤) 정보 매핑
+      const dieselBadge = document.getElementById('dieselBadge');
+      const dieselVal = document.getElementById('dieselPriceVal');
+      if (item.diesel_price) {
+        dieselBadge.textContent = '운영중'; dieselBadge.className = 'fuel-status-badge status-on';
+        dieselVal.textContent = `${Number(item.diesel_price).toLocaleString()}원`;
+      } else if (item.has_gas) {
+        dieselBadge.textContent = '운영중'; dieselBadge.className = 'fuel-status-badge status-on';
+        dieselVal.textContent = '가격 확인중';
+      } else {
+        dieselBadge.textContent = '없음'; dieselBadge.className = 'fuel-status-badge status-off';
+        dieselVal.textContent = '-';
+      }
+
+      // 3. LPG 충전소 정보 매핑
+      const lpgBadge = document.getElementById('lpgBadge');
+      const lpgVal = document.getElementById('lpgPriceVal');
+      if (item.lpg_price) {
+        lpgBadge.textContent = '운영중'; lpgBadge.className = 'fuel-status-badge status-on';
+        lpgVal.textContent = `${Number(item.lpg_price).toLocaleString()}원`;
+      } else if (item.has_lpg) {
+        lpgBadge.textContent = '운영중'; lpgBadge.className = 'fuel-status-badge status-on';
+        lpgVal.textContent = 'LPG 가능';
+      } else {
+        lpgBadge.textContent = '없음'; lpgBadge.className = 'fuel-status-badge status-off';
+        lpgVal.textContent = '-';
+      }
+
+      // 4. 전기차(EV) 충전소 정보 매핑
+      const evBadge = document.getElementById('evBadge');
+      const evVal = document.getElementById('evSummaryVal');
+      const evBox = document.getElementById('evDetailBox');
+      const evDetail = item.ev_detail;
+
+      if (evDetail && evDetail.count > 0) {
+        evBadge.textContent = '운영중'; evBadge.className = 'fuel-status-badge status-on';
+        evVal.textContent = `충전기 ${evDetail.count}기`;
+        
+        evBox.style.display = 'block';
+        document.getElementById('evHeader').innerHTML = `🔌 충전기 총 ${evDetail.count}기 운영`;
+        document.getElementById('evOperators').innerHTML = (evDetail.operators || []).map(op => `<span class="ev-op-badge">${op}</span>`).join(' ');
+        document.getElementById('evOutputs').innerHTML = `스펙: ${(evDetail.outputs || []).map(o => `<span class="ev-spec-pill">${o}</span>`).join(' ')}`;
+      } else if (item.has_ev) {
+        evBadge.textContent = '운영중'; evBadge.className = 'fuel-status-badge status-on';
+        evVal.textContent = '충전소 운영';
+        evBox.style.display = 'none';
+      } else {
+        evBadge.textContent = '없음'; evBadge.className = 'fuel-status-badge status-off';
+        evVal.textContent = '-';
+        evBox.style.display = 'none';
+      }
+
+      // 브랜드 매장 렌더링
       const brands = item.brand_list || [];
       document.getElementById('mBrandList').innerHTML = brands.length > 0 ? brands.map(b => `<span class="brand-pill">☕ ${b.name} <small>(${b.hours})</small></span>`).join('') : '<span style="font-size:11px; color:#94a3b8;">입점 브랜드 정보 없음</span>';
 
+      // 푸드코트 메뉴 렌더링
       const menuList = item.menu_list || [];
       if (menuList.length > 0) {
         currentCategories = categorizeMenus(menuList);
@@ -576,23 +684,11 @@
         document.getElementById('mMenuGrid').innerHTML = `<div style="font-size:12px; color:#64748b; padding:10px;">${item.best_food || '식당가 운영 중'}</div>`;
       }
 
+      // 주차장 세부 정보
       document.getElementById('mTotalPark').textContent = item.parking_count || ((item.parking_detail?.small||0) + (item.parking_detail?.large||0));
       document.getElementById('mSmallPark').textContent = item.parking_detail?.small || 0;
       document.getElementById('mLargePark').textContent = item.parking_detail?.large || 0;
 
-      const evBox = document.getElementById('evDetailBox');
-      const evDetail = item.ev_detail;
-      if (evDetail && evDetail.count > 0) {
-        evBox.style.display = 'block';
-        document.getElementById('evHeader').innerHTML = `🔌 전기차 충전기 ${evDetail.count}기 운영`;
-        document.getElementById('evOperators').innerHTML = (evDetail.operators || []).map(op => `<span class="ev-op-badge">${op}</span>`).join(' ');
-        document.getElementById('evOutputs').innerHTML = `스펙: ${(evDetail.outputs || []).map(o => `<span class="ev-spec-pill">${o}</span>`).join(' ')}`;
-      } else {
-        evBox.style.display = item.has_ev ? 'block' : 'none';
-        document.getElementById('evHeader').innerHTML = '🔌 전기차 충전소 운영 중';
-        document.getElementById('evOperators').innerHTML = '';
-        document.getElementById('evOutputs').innerHTML = '';
-      }
       document.getElementById('modalOverlay').classList.add('active');
     }
 
@@ -780,6 +876,8 @@
             const rLat = parseFloat(item.lat); const rLng = parseFloat(item.lng);
             if (isNaN(rLat) || isNaN(rLng)) return false;
             
+            // 연료 필터링 분기
+            if (prefFuel === 'GAS' && !item.has_gas) return false;
             if (prefFuel === 'LPG' && !item.has_lpg) return false;
             if (prefFuel === 'EV' && !item.has_ev) return false;
 
