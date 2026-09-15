@@ -9,7 +9,6 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.js"></script>
-  <!-- 좌표 변환(KATEC <-> WGS84)을 위한 Proj4js 라이브러리 추가 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.min.js"></script>
 
   <style>
@@ -46,7 +45,8 @@
     .input-wrapper { position: relative; width: 26%; flex-grow: 1; }
     .input-box { padding: 7px 6px; border-radius: 6px; font-size: 13px; width: 100%; outline: none; text-align: center; }
 
-    .autocomplete-dropdown { position: absolute; top: 100%; left: 0; width: 180%; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; max-height: 220px; overflow-y: auto; z-index: 3000; list-style: none; margin-top: 4px; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+    /* 6번 해결: 자동완성 창의 z-index를 최상단(9999)으로 올려서 가림 현상 완벽 방지 */
+    .autocomplete-dropdown { position: absolute; top: 100%; left: 0; width: 180%; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; max-height: 220px; overflow-y: auto; z-index: 9999; list-style: none; margin-top: 4px; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
     .autocomplete-dropdown li { padding: 10px; border-bottom: 1px solid #e2e8f0; cursor: pointer; color: #0f172a; text-align: left; }
     .autocomplete-dropdown li:hover { background: #e0f2fe; }
     .ac-title { font-size: 12px; font-weight: 800; color: #1e293b; margin-bottom: 2px; }
@@ -59,6 +59,9 @@
     #statusBadge { position: absolute; bottom: 20px; left: 15px; z-index: 1100; background: rgba(15, 23, 42, 0.9); border: 1px solid #38bdf8; color: #38bdf8; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; display: none; }
     
     .btn-location { position: absolute; right: 15px; z-index: 1100; width: 46px; height: 46px; border-radius: 50%; font-size: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); bottom: 25px; }
+
+    /* 5번 해결: 주유소 마커 켜기/끄기 토글 버튼 추가 */
+    #toggleGasBtn { display: none; position: absolute; right: 15px; z-index: 1100; width: 46px; height: 46px; border-radius: 50%; font-size: 20px; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); bottom: 85px; background: #ea580c; border: 2px solid white; color: white; }
 
     #routeSelectorBar { display: none; position: absolute; top: 64px; left: 50%; transform: translateX(-50%); z-index: 1000; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(6px); padding: 6px; border-radius: 16px; border: 1px solid #38bdf8; box-shadow: 0 4px 15px rgba(0,0,0,0.2); gap: 6px; width: 90vw; overflow-x: auto; }
     body.dark-theme #routeSelectorBar { background: rgba(15, 23, 42, 0.92); }
@@ -114,7 +117,6 @@
     body.dark-theme .food-name { color: #f8fafc; }
     .food-price { font-size: 13px; font-weight: 800; color: #d97706; margin-top: 2px; }
 
-    /* 에너지 & 주유 그리드 스타일 */
     .fuel-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 10px; }
     .fuel-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 3px; }
     body.dark-theme .fuel-card { background: #0f172a; border-color: #334155; }
@@ -163,6 +165,10 @@
 
   <div id="statusBadge">준비 중...</div>
   <button class="btn-location" onclick="goToCurrentLocation()" title="내 위치로 이동">🎯</button>
+  
+  <!-- 5번 해결: 주유소 끄기/켜기 버튼 -->
+  <div id="toggleGasBtn" onclick="toggleGasStations()" title="주유소 숨기기">⛽</div>
+  
   <div id="routeSelectorBar"></div>
   <div id="map"></div>
 
@@ -247,10 +253,8 @@
         <div class="fact-card" style="border-left: 4px solid #8b5cf6;">
           <h4>👨‍💻 개발자 프로필</h4>
           <div class="dev-text">
-            <b>• 소속:</b> 한국폴리텍대학 충주캠퍼스 AI드론과 재학 (91년생)<br>
-            <b>• 이력:</b> 반도체 장비유지보수 실무 (7년 6개월), 용접 실무 (1년)<br>
-            <b>• 자격:</b> 용접산업기사, 특수용접기능사, 가스기능사 보유<br>
-            <b>• 관심사:</b> 3D 프린팅(Bambu Lab), 드론 공간정보 매핑, 주식 실전 투자
+            <b>• 개발자:</b> L.H.H<br>
+            <b>• Mail:</b> xellosmx@naver.com<br>
           </div>
         </div>
 
@@ -320,7 +324,6 @@
             <div id="evHeader" style="font-size: 12px; font-weight: 800; color: #15803d; margin-bottom: 4px;"></div>
             <div id="evOperators" style="margin-bottom: 4px;"></div>
             <div id="evOutputs" style="font-size: 11px; color: #166534;"></div>
-            <!-- 전기차 단가 추가 영역 -->
             <div id="evPriceInfo" class="ev-price-text"></div>
           </div>
         </div>
@@ -348,10 +351,10 @@
   </div>
 
   <script>
-    // KATEC 좌표계 정의 (오피넷 API 연동용)
+    // 오피넷 KATEC 좌표계
     proj4.defs("KATEC", "+proj=tmerc +lat_0=38 +lon_0=128 +k=0.9999 +x_0=400000 +y_0=600000 +ellps=bessel +towgs84=-115.80,474.99,674.11,1.16,-2.31,-1.63,6.43 +units=m +no_defs");
 
-    // 전기차 충전 운영사별 대략적인 표준 단가표 (내장 데이터)
+    // 전기차 예상 충전단가 내장 표
     const EV_RATES = {
       "기후에너지환경부": "약 347.2원/kWh",
       "한국전력": "약 347.2원/kWh",
@@ -366,18 +369,19 @@
         if (splash) { splash.style.opacity = '0'; setTimeout(() => { splash.style.display = 'none'; }, 500); }
       }, 2000);
       loadSettings(); 
-      setInterval(checkAutoTheme, 60000); // 1분마다 다크모드 시간 체크
+      setInterval(checkAutoTheme, 60000); 
     });
 
     const KAKAO_REST_API_KEY = '9ab57e47f2e219d0972329862be77d25';
-    const OPINET_API_KEY = 'F260915130'; // 사용자 발급 오피넷 키
+    const OPINET_API_KEY = 'F260915130'; 
     const map = L.map('map', { zoomControl: false }).setView([36.5, 127.8], 8);
     L.control.zoom({ position: 'topright' }).addTo(map);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' }).addTo(map);
 
     let allRestAreas = [];
-    let allDrowsyAreas = []; // 졸음쉼터 데이터 배열
+    let allDrowsyAreas = [];
     let markersLayer = L.layerGroup().addTo(map);
+    let gasMarkersLayer = L.layerGroup().addTo(map); // 5번 해결: 주유소만 담는 전용 레이어 분리
     let routeLayersGroup = L.layerGroup().addTo(map);
     let userLocationLayer = L.layerGroup().addTo(map);
     let arrowLayersGroup = L.layerGroup().addTo(map); 
@@ -385,29 +389,26 @@
     let foundRoutes = [];
     let currentUserLatLng = null;
     let watchId = null;
-    let animFrameId = null; // 턴시그널 애니메이션용
+    let animTimerId = null; // 4번 해결: requestAnimationFrame 대신 안정적인 setInterval 사용
     let arrowOffset = 0;
+    let isGasVisible = true; // 주유소 표시 상태 저장
 
     const defaultImg = 'https://images.unsplash.com/photo-1541832676-9b763b0239ab?auto=format&fit=crop&w=150&q=80';
     const statusBadge = document.getElementById('statusBadge');
 
-    // 마스터 휴게소 및 졸음쉼터 데이터 로드
-    fetch('rest_areas_master.json?v=' + Date.now(), { cache: 'no-store' }).then(res => res.json()).then(data => { allRestAreas = data; initUserLocation(); }).catch(e => console.log('휴게소 로드 실패'));
-    fetch('drowsy_areas.json?v=' + Date.now(), { cache: 'no-store' }).then(res => res.json()).then(data => { allDrowsyAreas = data; }).catch(e => console.log('졸음쉼터 파일 없음(무시됨)'));
+    fetch('rest_areas_master.json?v=' + Date.now(), { cache: 'no-store' }).then(res => res.json()).then(data => { allRestAreas = data; initUserLocation(); }).catch(e => {});
+    fetch('drowsy_areas.json?v=' + Date.now(), { cache: 'no-store' }).then(res => res.json()).then(data => { allDrowsyAreas = data; }).catch(e => {});
 
     function openSettings() { document.getElementById('settingsOverlay').classList.add('active'); }
     function closeSettings() { document.getElementById('settingsOverlay').classList.remove('active'); }
     function handleSettingsClick(e) { if (e.target.id === 'settingsOverlay') closeSettings(); }
 
-    /* ====== 테마 자동 전환 로직 ====== */
     function applyThemeAndSave() {
       const mode = document.getElementById('darkConfig').value;
       document.getElementById('timeSettingBox').style.display = (mode === 'AUTO') ? 'flex' : 'none';
-      
       localStorage.setItem('pref_theme_mode', mode);
       localStorage.setItem('pref_dark_start', document.getElementById('darkStartTime').value);
       localStorage.setItem('pref_dark_end', document.getElementById('darkEndTime').value);
-      
       checkAutoTheme();
     }
 
@@ -422,11 +423,7 @@
         const end = localStorage.getItem('pref_dark_end') || '06:00';
         const now = new Date();
         const timeStr = now.getHours().toString().padStart(2,'0') + ":" + now.getMinutes().toString().padStart(2,'0');
-        
-        let isNight = false;
-        if (start < end) { isNight = timeStr >= start && timeStr < end; } 
-        else { isNight = timeStr >= start || timeStr < end; }
-
+        let isNight = (start < end) ? (timeStr >= start && timeStr < end) : (timeStr >= start || timeStr < end);
         if (isNight) { document.body.classList.add('dark-theme'); document.body.classList.remove('light-theme'); } 
         else { document.body.classList.add('light-theme'); document.body.classList.remove('dark-theme'); }
       }
@@ -437,13 +434,9 @@
       localStorage.setItem('pref_home', document.getElementById('homeInput').value.trim());
       localStorage.setItem('pref_food', document.getElementById('foodInput').value.trim());
       applyThemeAndSave();
-
       if (foundRoutes.length > 0) {
         const activeBtn = document.querySelector('.route-tab-btn.active');
-        if (activeBtn) {
-          const idx = Array.from(activeBtn.parentNode.children).indexOf(activeBtn);
-          selectActiveRoute(idx);
-        }
+        if (activeBtn) selectActiveRoute(Array.from(activeBtn.parentNode.children).indexOf(activeBtn));
       }
       alert('설정이 안전하게 저장되었습니다.');
     }
@@ -452,7 +445,6 @@
       document.getElementById('fuelSelect').value = localStorage.getItem('pref_fuel') || 'ALL';
       document.getElementById('homeInput').value = localStorage.getItem('pref_home') || '';
       document.getElementById('foodInput').value = localStorage.getItem('pref_food') || '';
-      
       const mode = localStorage.getItem('pref_theme_mode') || 'LIGHT';
       document.getElementById('darkConfig').value = mode;
       document.getElementById('darkStartTime').value = localStorage.getItem('pref_dark_start') || '18:00';
@@ -464,13 +456,12 @@
     function forceAppUpdate() {
       if ('caches' in window) { caches.keys().then(names => names.forEach(name => caches.delete(name))); }
       if ('serviceWorker' in navigator) { navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update())); }
-      alert('최신 버전으로 앱을 업데이트합니다.');
-      window.location.href = window.location.pathname + '?v=' + new Date().getTime();
+      alert('최신 버전으로 업데이트합니다.'); window.location.href = window.location.pathname + '?v=' + new Date().getTime();
     }
     
     function promptHomeAction() {
       const homeAddr = localStorage.getItem('pref_home');
-      if (!homeAddr) return alert('설정 창(⚙️)에서 내 집 주소를 먼저 저장해주세요.');
+      if (!homeAddr) return alert('설정에서 내 집 주소를 먼저 저장해주세요.');
       document.getElementById('homeActionOverlay').classList.add('active');
     }
 
@@ -496,7 +487,7 @@
 
     function renderUserMarker(latLng, accuracy = 50) {
       userLocationLayer.clearLayers();
-      L.circleMarker(latLng, { radius: 8, fillColor: '#2563eb', color: '#ffffff', weight: 3, opacity: 1, fillOpacity: 1 }).addTo(userLocationLayer).bindTooltip("내 현재 위치", { permanent: true, direction: "bottom", offset: [0, 6] });
+      L.circleMarker(latLng, { radius: 8, fillColor: '#2563eb', color: '#ffffff', weight: 3, opacity: 1, fillOpacity: 1 }).addTo(userLocationLayer).bindTooltip("내 위치", { permanent: true, direction: "bottom", offset: [0, 6] });
       L.circle(latLng, { radius: Math.min(accuracy, 200), color: '#38bdf8', weight: 1, fillColor: '#38bdf8', fillOpacity: 0.15 }).addTo(userLocationLayer);
     }
     function goToCurrentLocation() { if (currentUserLatLng) { map.setView(currentUserLatLng, 15); } initUserLocation(); }
@@ -505,7 +496,6 @@
     const startInput = document.getElementById('startInput');
     const endInput = document.getElementById('endInput');
     const homeInput = document.getElementById('homeInput');
-    
     const startDropdown = document.getElementById('startDropdown');
     const endDropdown = document.getElementById('endDropdown');
     const homeDropdown = document.getElementById('homeDropdown');
@@ -576,7 +566,6 @@
 
     let currentCategories = {};
 
-    /* ====== 국도 주유소 팝업 오픈 ====== */
     function openGasModal(gasData) {
       document.getElementById('mTitle').textContent = gasData.OS_NM;
       document.getElementById('mRoute').textContent = gasData.NEW_ADRES || "국도 주유소";
@@ -593,15 +582,16 @@
       document.getElementById('evDetailBox').style.display = 'none';
 
       document.getElementById('mBrandList').innerHTML = `<span class="brand-pill">📞 ${gasData.TEL || '전화번호 정보 없음'}</span>`;
+      document.getElementById('foodCardDiv').style.display = 'block';
       document.getElementById('menuCardDiv').style.display = 'none';
       document.getElementById('parkCardDiv').style.display = 'none';
 
       document.getElementById('modalOverlay').classList.add('active');
     }
 
-    /* ====== 휴게소 상세 모달 열기 (전기차 단가 포함) ====== */
     function openModal(item) {
       document.getElementById('mBadge').style.display = 'inline-block';
+      document.getElementById('foodCardDiv').style.display = 'block';
       document.getElementById('menuCardDiv').style.display = 'block';
       document.getElementById('parkCardDiv').style.display = 'block';
 
@@ -656,7 +646,6 @@
         document.getElementById('evOperators').innerHTML = (evDetail.operators || []).map(op => `<span class="ev-op-badge">${op}</span>`).join(' ');
         document.getElementById('evOutputs').innerHTML = `스펙: ${(evDetail.outputs || []).map(o => `<span class="ev-spec-pill">${o}</span>`).join(' ')}`;
         
-        // 대표 운영사의 단가 매핑
         const mainOp = evDetail.operators[0] || "";
         const expectedRate = EV_RATES[mainOp] || "약 340~350원/kWh (운영사별 상이)";
         evPriceInfo.textContent = `💰 예상 단가: ${expectedRate}`;
@@ -712,19 +701,8 @@
             }
             if (!kData.meta || kData.meta.is_end) break;
           }
-        } catch (e) { console.warn('카카오 검색 오류:', e); }
+        } catch (e) { }
       }
-      try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanKeyword)}&countrycodes=kr&limit=10&dedupe=0`, { headers: { 'User-Agent': 'HighwayGuide/1.0' } });
-        const data = await res.json();
-        if (data && data.length > 0) {
-          data.forEach(d => {
-            const o = { name: d.display_name.split(',')[0], address: d.display_name, lat: parseFloat(d.lat), lng: parseFloat(d.lon) };
-            const isDup = results.some(r => getDistance(r.lat, r.lng, o.lat, o.lng) < 0.15);
-            if (!isDup) results.push(o);
-          });
-        }
-      } catch (err) {}
       return results;
     }
 
@@ -762,7 +740,7 @@
     let searchStartCoord = null; let searchEndCoord = null;
     let lastConfirmedStartText = null; let lastConfirmedEndText = null;
 
-    /* ====== 1. 다중 경로 (고속도로 2개 이상 + 무료 1개) 동시 탐색 ====== */
+    /* ====== 1번 해결: 다중 경로 탐색 시 중복 필터 제거 ====== */
     async function handleSearchRoute() {
       const startText = document.getElementById('startInput').value.trim();
       const endText = document.getElementById('endInput');
@@ -799,7 +777,6 @@
           searchEndCoord = chosenEnd; document.getElementById('endInput').value = searchEndCoord.name; lastConfirmedEndText = searchEndCoord.name;
         }
 
-        // 추천, 최단시간, 무료 경로 동시 요청
         const urlRecommend = `https://apis-navi.kakaomobility.com/v1/directions?origin=${searchStartCoord.lng},${searchStartCoord.lat}&destination=${searchEndCoord.lng},${searchEndCoord.lat}&priority=RECOMMEND`;
         const urlTime = `https://apis-navi.kakaomobility.com/v1/directions?origin=${searchStartCoord.lng},${searchStartCoord.lat}&destination=${searchEndCoord.lng},${searchEndCoord.lat}&priority=TIME`;
         const urlFree = `https://apis-navi.kakaomobility.com/v1/directions?origin=${searchStartCoord.lng},${searchStartCoord.lat}&destination=${searchEndCoord.lng},${searchEndCoord.lat}&priority=RECOMMEND&avoid=toll`;
@@ -837,10 +814,11 @@
         if (route1) foundRoutes.push(route1);
 
         const route2 = parseRoute(dataTime, '최단시간');
-        if (route2 && (!route1 || route2.duration !== route1.duration)) foundRoutes.push(route2);
+        // 중복 방지 조건을 제거하여 무조건 2개 이상의 고속도로 대안 경로를 보여줍니다.
+        if (route2) foundRoutes.push(route2);
 
         const route3 = parseRoute(dataFree, '무료도로');
-        if (route3 && (!route1 || route3.duration !== route1.duration)) foundRoutes.push(route3);
+        if (route3) foundRoutes.push(route3);
 
         if (foundRoutes.length === 0) { alert('경로를 찾을 수 없습니다.'); btn.textContent = '탐색'; btn.disabled = false; return; }
 
@@ -873,15 +851,27 @@
       else { return !(dir.includes('하행') || dir.includes('부산') || dir.includes('목포') || dir.includes('순천') || dir.includes('창원') || dir.includes('광주')); }
     }
 
-    /* ====== 2. 오피넷 국도 주유소 검색 및 변환 로직 ====== */
+    // 5번 해결: 주유소 마커 끄기/켜기 토글 기능
+    function toggleGasStations() {
+      isGasVisible = !isGasVisible;
+      if(isGasVisible) {
+        map.addLayer(gasMarkersLayer);
+        document.getElementById('toggleGasBtn').style.background = '#ea580c';
+        document.getElementById('toggleGasBtn').style.opacity = '1';
+      } else {
+        map.removeLayer(gasMarkersLayer);
+        document.getElementById('toggleGasBtn').style.background = '#64748b';
+        document.getElementById('toggleGasBtn').style.opacity = '0.5';
+      }
+    }
+
     async function searchAndRenderGasStations(latLngs) {
-      markersLayer.clearLayers();
+      gasMarkersLayer.clearLayers();
       const checkMap = new Set();
       let accumulatedDist = 0;
       let lastPoint = latLngs[0];
       const samplePoints = [lastPoint];
 
-      // 15km 단위로 API 검색용 좌표 샘플 추출
       for (let i = 1; i < latLngs.length; i++) {
         const d = getDistance(lastPoint[0], lastPoint[1], latLngs[i][0], latLngs[i][1]);
         accumulatedDist += d;
@@ -897,13 +887,11 @@
       statusBadge.style.display = 'block';
 
       for (const pt of samplePoints) {
-        // WGS84 -> KATEC 좌표 변환 (오피넷 요구사항)
         const katec = proj4('EPSG:4326', 'KATEC', [pt[1], pt[0]]);
         const katecX = Math.round(katec[0]);
         const katecY = Math.round(katec[1]);
 
         const opinetUrl = `http://www.opinet.co.kr/api/aroundAll.do?code=${OPINET_API_KEY}&x=${katecX}&y=${katecY}&radius=3000&prodcd=B027&out=json`;
-        // 브라우저 CORS 회피를 위한 공용 프록시 (allorigins)
         const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(opinetUrl)}`;
 
         try {
@@ -915,36 +903,36 @@
             data.RESULT.OIL.forEach(oil => {
               if (!checkMap.has(oil.UNI_ID)) {
                 checkMap.add(oil.UNI_ID);
-                // KATEC -> WGS84 재변환하여 지도에 찍기
                 const wgs84 = proj4('KATEC', 'EPSG:4326', [oil.GIS_X_COOR, oil.GIS_Y_COOR]);
-                const lat = wgs84[1]; const lng = wgs84[0];
-
+                
                 const customIcon = L.divIcon({ 
                   className: 'rest-unified-marker', 
                   html: `<div class="rest-tag" style="background:#ea580c; color:white; border-color:#c2410c; font-size:10px;">⛽ ${oil.OS_NM}</div><div class="rest-dot" style="background:#c2410c; border-color:white;"></div>`, 
                   iconSize: [120, 36], iconAnchor: [60, 36] 
                 });
                 
-                L.marker([lat, lng], { icon: customIcon }).addTo(markersLayer).on('click', () => openGasModal(oil));
+                L.marker([wgs84[1], wgs84[0]], { icon: customIcon }).addTo(gasMarkersLayer).on('click', () => openGasModal(oil));
               }
             });
           }
-        } catch(e) { console.log('오피넷 연동 지연'); }
+        } catch(e) {}
       }
       statusBadge.style.display = 'none';
+      document.getElementById('toggleGasBtn').style.display = 'flex'; // 토글 버튼 보이기
     }
 
-    /* ====== 경로 선택 및 턴시그널 애니메이션 글로우 적용 ====== */
     function selectActiveRoute(targetIdx) {
       document.querySelectorAll('.route-tab-btn').forEach((b, idx) => { b.classList.toggle('active', idx === targetIdx); });
-      routeLayersGroup.clearLayers(); arrowLayersGroup.clearLayers();
-      if(animFrameId) cancelAnimationFrame(animFrameId);
+      routeLayersGroup.clearLayers(); arrowLayersGroup.clearLayers(); 
+      markersLayer.clearLayers(); gasMarkersLayer.clearLayers(); // 3번 해결: 마커 완전 초기화
+      document.getElementById('toggleGasBtn').style.display = 'none'; // 주유소 버튼 숨기기
+      
+      if(animTimerId) clearInterval(animTimerId); // 애니메이션 초기화
 
       foundRoutes.forEach((route, idx) => {
         const latLngs = route.geometry.coordinates; 
         const isSelected = (idx === targetIdx);
 
-        // 글로우 효과를 위해 두꺼운 투명선을 먼저 깔아줌
         if (isSelected) {
           L.polyline(latLngs, { color: '#60a5fa', weight: 16, opacity: 0.35, lineJoin: 'round' }).addTo(routeLayersGroup);
         }
@@ -961,20 +949,18 @@
 
           const arrowLayer = L.polylineDecorator(poly, {
             patterns: [{
-              offset: 0, repeat: 80,
-              symbol: L.Symbol.arrowHead({ pixelSize: 10, polygon: false, pathOptions: { stroke: true, weight: 3, color: '#ffffff', opacity: 1 } })
+              offset: 0, repeat: 100,
+              symbol: L.Symbol.arrowHead({ pixelSize: 12, polygon: false, pathOptions: { stroke: true, weight: 3, color: '#ffffff', opacity: 1 } })
             }]
           }).addTo(arrowLayersGroup);
 
-          // 3. 턴시그널 화살표 애니메이션
-          function animateArrows() {
-            arrowOffset = (arrowOffset + 0.5) % 80;
+          // 4번 해결: 부드럽고 안정적인 애니메이션 타이머 (플립북 속도 조절)
+          animTimerId = setInterval(() => {
+            arrowOffset = (arrowOffset + 2) % 100;
             const p = arrowLayer.options.patterns;
             p[0].offset = arrowOffset;
             arrowLayer.setPatterns(p);
-            animFrameId = requestAnimationFrame(animateArrows);
-          }
-          animateArrows();
+          }, 40);
 
           if (route.type.includes('무료')) {
              searchAndRenderGasStations(latLngs);
@@ -983,9 +969,6 @@
              const prefFuel = document.getElementById('fuelSelect').value; 
              const prefFood = localStorage.getItem('pref_food') || ''; 
 
-             markersLayer.clearLayers();
-
-             // 휴게소 마커 렌더링
              allRestAreas.forEach(item => {
                const rLat = parseFloat(item.lat); const rLng = parseFloat(item.lng);
                if (isNaN(rLat) || isNaN(rLng)) return;
@@ -1007,7 +990,8 @@
                L.marker([rLat, rLng], { icon: customIcon }).addTo(markersLayer).on('click', () => openModal(item));
              });
 
-             // 졸음쉼터 마커 렌더링 (drowsy_areas.json 로드 시)
+             // 2번 해결: 졸음쉼터 탐색 로직 및 알림
+             let drowsyFound = false;
              allDrowsyAreas.forEach(item => {
                const rLat = parseFloat(item.lat); const rLng = parseFloat(item.lng);
                if (isNaN(rLat) || isNaN(rLng)) return;
@@ -1017,11 +1001,17 @@
                }
                if (!onPath || !isRightDirection(item, isSouthBound)) return;
 
+               drowsyFound = true;
                const iconHtml = `<div class="rest-tag" style="background:#fcd34d; color:#78350f; border-color:#d97706; font-size:10px;">💤 ${item.name}</div><div class="rest-dot" style="background:#fcd34d; border-color:#d97706;"></div>`;
                const customIcon = L.divIcon({ className: 'rest-unified-marker', html: iconHtml, iconSize: [100, 36], iconAnchor: [50, 36] });
                const m = L.marker([rLat, rLng], { icon: customIcon }).addTo(markersLayer);
                m.bindPopup(`<b style="font-size:14px;">${item.name}</b><br><span style="font-size:12px; color:#64748b;">휴식 전용 졸음쉼터</span>`);
              });
+
+             // 졸음쉼터 파일이 로드되었으나 경로상에 없는 경우 알림
+             if (allDrowsyAreas.length > 0 && !drowsyFound) {
+               setTimeout(() => alert("해당 경로에는 졸음쉼터가 없습니다."), 500);
+             }
           }
         }
       });
@@ -1030,9 +1020,11 @@
     function resetView() {
       closeModal();
       document.getElementById('routeSelectorBar').style.display = 'none';
+      document.getElementById('toggleGasBtn').style.display = 'none';
       startDropdown.style.display = 'none'; endDropdown.style.display = 'none';
-      routeLayersGroup.clearLayers(); arrowLayersGroup.clearLayers(); markersLayer.clearLayers();
-      if(animFrameId) cancelAnimationFrame(animFrameId);
+      routeLayersGroup.clearLayers(); arrowLayersGroup.clearLayers(); 
+      markersLayer.clearLayers(); gasMarkersLayer.clearLayers();
+      if(animTimerId) clearInterval(animTimerId);
       document.getElementById('startInput').value = ''; document.getElementById('endInput').value = '';
       searchStartCoord = null; searchEndCoord = null;
       lastConfirmedStartText = null; lastConfirmedEndText = null;
