@@ -9,6 +9,8 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://unpkg.com/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.js"></script>
+  <!-- 좌표 변환(KATEC <-> WGS84)을 위한 Proj4js 라이브러리 추가 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.min.js"></script>
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Pretendard", Roboto, sans-serif; }
@@ -92,7 +94,7 @@
     .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 13px; font-weight: 600; }
     body.dark-theme .setting-row { color: #e2e8f0; }
     body.light-theme .setting-row { color: #334155; }
-    .setting-row select, .setting-row input[type="text"] { padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px; outline: none; background: white; color: #1e293b;}
+    .setting-row select, .setting-row input[type="text"], .setting-row input[type="time"] { padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px; outline: none; background: white; color: #1e293b;}
     
     .badge { display: inline-block; padding: 3px 6px; font-size: 11px; font-weight: 700; border-radius: 5px; color: white; margin-bottom: 4px; }
     .badge-혼잡 { background: #ef4444; } .badge-보통 { background: #f59e0b; } .badge-원활 { background: #10b981; }
@@ -112,6 +114,7 @@
     body.dark-theme .food-name { color: #f8fafc; }
     .food-price { font-size: 13px; font-weight: 800; color: #d97706; margin-top: 2px; }
 
+    /* 에너지 & 주유 그리드 스타일 */
     .fuel-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 10px; }
     .fuel-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 3px; }
     body.dark-theme .fuel-card { background: #0f172a; border-color: #334155; }
@@ -127,17 +130,9 @@
     body.dark-theme .ev-box { background: #064e3b; border-color: #047857; }
     .ev-op-badge { background: #15803d; color: white; font-size: 10px; font-weight: 700; padding: 2px 5px; border-radius: 4px; }
     .ev-spec-pill { background: #dcfce7; color: #166534; font-size: 10px; font-weight: 700; padding: 2px 5px; border-radius: 4px; }
-
-    .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
-    .switch input { opacity: 0; width: 0; height: 0; }
-    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .4s; border-radius: 24px; }
-    .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
-    input:checked + .slider { background-color: #2563eb; }
-    input:checked + .slider:before { transform: translateX(20px); }
+    .ev-price-text { font-size: 11px; color: #ca8a04; font-weight: 800; display: block; margin-top: 4px; }
     
     .dev-text { font-size: 12px; color: #475569; line-height: 1.6; }
-
-    /* 카카오맵 팝업용 커스텀 스타일 */
     .leaflet-popup-content { margin: 12px !important; line-height: 1.4; }
   </style>
 </head>
@@ -220,13 +215,20 @@
         </div>
 
         <div class="fact-card" style="border-left: 4px solid #3b82f6;">
-          <h4>📱 화면 설정</h4>
-          <div class="setting-row" style="margin-bottom: 0;">
-            <span>다크 모드 (야간 주행용 지도)</span>
-            <label class="switch">
-              <input type="checkbox" id="themeToggle" onchange="saveThemeImmediately()">
-              <span class="slider"></span>
-            </label>
+          <h4>📱 테마 화면 설정</h4>
+          <div class="setting-row">
+            <span>다크 모드 강제/자동 선택</span>
+            <select id="darkConfig" onchange="applyThemeAndSave()">
+              <option value="LIGHT">항상 밝게</option>
+              <option value="DARK">항상 어둡게</option>
+              <option value="AUTO">시간대 자동 (야간주행용)</option>
+            </select>
+          </div>
+          <div class="setting-row" id="timeSettingBox" style="display:none; justify-content: flex-end; gap:6px;">
+            <span style="font-size:11px; color:#64748b;">작동시간</span>
+            <input type="time" id="darkStartTime" value="18:00" onchange="applyThemeAndSave()" style="width:90px;" />
+            <span style="font-size:11px; color:#64748b;">~</span>
+            <input type="time" id="darkEndTime" value="06:00" onchange="applyThemeAndSave()" style="width:90px;" />
           </div>
         </div>
 
@@ -245,8 +247,10 @@
         <div class="fact-card" style="border-left: 4px solid #8b5cf6;">
           <h4>👨‍💻 개발자 프로필</h4>
           <div class="dev-text">
-            <b>• 개발자:</b> L.H.H<br>
-            <b>• Mail:</b> xellosmx@naver.com<br>
+            <b>• 소속:</b> 한국폴리텍대학 충주캠퍼스 AI드론과 재학 (91년생)<br>
+            <b>• 이력:</b> 반도체 장비유지보수 실무 (7년 6개월), 용접 실무 (1년)<br>
+            <b>• 자격:</b> 용접산업기사, 특수용접기능사, 가스기능사 보유<br>
+            <b>• 관심사:</b> 3D 프린팅(Bambu Lab), 드론 공간정보 매핑, 주식 실전 투자
           </div>
         </div>
 
@@ -316,21 +320,23 @@
             <div id="evHeader" style="font-size: 12px; font-weight: 800; color: #15803d; margin-bottom: 4px;"></div>
             <div id="evOperators" style="margin-bottom: 4px;"></div>
             <div id="evOutputs" style="font-size: 11px; color: #166534;"></div>
+            <!-- 전기차 단가 추가 영역 -->
+            <div id="evPriceInfo" class="ev-price-text"></div>
           </div>
         </div>
 
-        <div class="fact-card" style="border-left: 4px solid #3b82f6;">
+        <div class="fact-card" id="foodCardDiv" style="border-left: 4px solid #3b82f6;">
           <h4>☕ 입점 브랜드</h4>
           <div id="mBrandList"></div>
         </div>
         
-        <div class="fact-card" style="border-left: 4px solid #0284c7;">
+        <div class="fact-card" id="menuCardDiv" style="border-left: 4px solid #0284c7;">
           <h4>🍽️ 메뉴 및 가격표</h4>
           <div class="store-tabs" id="mStoreTabs"></div>
           <div class="menu-cards-grid" id="mMenuGrid"></div>
         </div>
         
-        <div class="fact-card">
+        <div class="fact-card" id="parkCardDiv">
           <h4>🅿️ 주차 시설</h4>
           <div style="font-size: 12px; margin-top: 2px;">
             총 주차면수: <b id="mTotalPark">-</b>대 (소형 <span id="mSmallPark">-</span> / 대형 <span id="mLargePark">-</span>)
@@ -342,62 +348,95 @@
   </div>
 
   <script>
+    // KATEC 좌표계 정의 (오피넷 API 연동용)
+    proj4.defs("KATEC", "+proj=tmerc +lat_0=38 +lon_0=128 +k=0.9999 +x_0=400000 +y_0=600000 +ellps=bessel +towgs84=-115.80,474.99,674.11,1.16,-2.31,-1.63,6.43 +units=m +no_defs");
+
+    // 전기차 충전 운영사별 대략적인 표준 단가표 (내장 데이터)
+    const EV_RATES = {
+      "기후에너지환경부": "약 347.2원/kWh",
+      "한국전력": "약 347.2원/kWh",
+      "현대엔지니어링": "약 347.2원/kWh",
+      "에버온": "약 330원/kWh",
+      "채비(CHAEVI)": "약 340원/kWh"
+    };
+
     window.addEventListener('load', function() {
       setTimeout(function() {
         const splash = document.getElementById('splash-screen');
         if (splash) { splash.style.opacity = '0'; setTimeout(() => { splash.style.display = 'none'; }, 500); }
       }, 2000);
       loadSettings(); 
+      setInterval(checkAutoTheme, 60000); // 1분마다 다크모드 시간 체크
     });
 
     const KAKAO_REST_API_KEY = '9ab57e47f2e219d0972329862be77d25';
+    const OPINET_API_KEY = 'F260915130'; // 사용자 발급 오피넷 키
     const map = L.map('map', { zoomControl: false }).setView([36.5, 127.8], 8);
     L.control.zoom({ position: 'topright' }).addTo(map);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' }).addTo(map);
 
     let allRestAreas = [];
+    let allDrowsyAreas = []; // 졸음쉼터 데이터 배열
     let markersLayer = L.layerGroup().addTo(map);
     let routeLayersGroup = L.layerGroup().addTo(map);
     let userLocationLayer = L.layerGroup().addTo(map);
     let arrowLayersGroup = L.layerGroup().addTo(map); 
+    
     let foundRoutes = [];
     let currentUserLatLng = null;
     let watchId = null;
+    let animFrameId = null; // 턴시그널 애니메이션용
+    let arrowOffset = 0;
 
     const defaultImg = 'https://images.unsplash.com/photo-1541832676-9b763b0239ab?auto=format&fit=crop&w=150&q=80';
     const statusBadge = document.getElementById('statusBadge');
 
-    fetch('rest_areas_master.json?v=' + Date.now(), { cache: 'no-store' })
-      .then(res => res.json())
-      .then(data => { allRestAreas = data; statusBadge.textContent = '내 위치 확인 중...'; statusBadge.style.display = 'block'; initUserLocation(); })
-      .catch(err => { statusBadge.textContent = 'JSON 로드 실패'; statusBadge.style.display = 'block'; });
+    // 마스터 휴게소 및 졸음쉼터 데이터 로드
+    fetch('rest_areas_master.json?v=' + Date.now(), { cache: 'no-store' }).then(res => res.json()).then(data => { allRestAreas = data; initUserLocation(); }).catch(e => console.log('휴게소 로드 실패'));
+    fetch('drowsy_areas.json?v=' + Date.now(), { cache: 'no-store' }).then(res => res.json()).then(data => { allDrowsyAreas = data; }).catch(e => console.log('졸음쉼터 파일 없음(무시됨)'));
 
     function openSettings() { document.getElementById('settingsOverlay').classList.add('active'); }
     function closeSettings() { document.getElementById('settingsOverlay').classList.remove('active'); }
     function handleSettingsClick(e) { if (e.target.id === 'settingsOverlay') closeSettings(); }
 
-    function saveThemeImmediately() {
-      const isDark = document.getElementById('themeToggle').checked;
-      localStorage.setItem('pref_dark', isDark);
-      if (isDark) {
-        document.body.classList.add('dark-theme');
-        document.body.classList.remove('light-theme');
-      } else {
-        document.body.classList.add('light-theme');
-        document.body.classList.remove('dark-theme');
+    /* ====== 테마 자동 전환 로직 ====== */
+    function applyThemeAndSave() {
+      const mode = document.getElementById('darkConfig').value;
+      document.getElementById('timeSettingBox').style.display = (mode === 'AUTO') ? 'flex' : 'none';
+      
+      localStorage.setItem('pref_theme_mode', mode);
+      localStorage.setItem('pref_dark_start', document.getElementById('darkStartTime').value);
+      localStorage.setItem('pref_dark_end', document.getElementById('darkEndTime').value);
+      
+      checkAutoTheme();
+    }
+
+    function checkAutoTheme() {
+      const mode = localStorage.getItem('pref_theme_mode') || 'LIGHT';
+      if (mode === 'DARK') {
+        document.body.classList.add('dark-theme'); document.body.classList.remove('light-theme');
+      } else if (mode === 'LIGHT') {
+        document.body.classList.add('light-theme'); document.body.classList.remove('dark-theme');
+      } else if (mode === 'AUTO') {
+        const start = localStorage.getItem('pref_dark_start') || '18:00';
+        const end = localStorage.getItem('pref_dark_end') || '06:00';
+        const now = new Date();
+        const timeStr = now.getHours().toString().padStart(2,'0') + ":" + now.getMinutes().toString().padStart(2,'0');
+        
+        let isNight = false;
+        if (start < end) { isNight = timeStr >= start && timeStr < end; } 
+        else { isNight = timeStr >= start || timeStr < end; }
+
+        if (isNight) { document.body.classList.add('dark-theme'); document.body.classList.remove('light-theme'); } 
+        else { document.body.classList.add('light-theme'); document.body.classList.remove('dark-theme'); }
       }
     }
 
     function saveSettingsBtn() {
-      const fuel = document.getElementById('fuelSelect').value;
-      const homeAddr = document.getElementById('homeInput').value.trim();
-      const prefFood = document.getElementById('foodInput').value.trim();
-      
-      localStorage.setItem('pref_fuel', fuel);
-      localStorage.setItem('pref_home', homeAddr);
-      localStorage.setItem('pref_food', prefFood);
-      
-      saveThemeImmediately();
+      localStorage.setItem('pref_fuel', document.getElementById('fuelSelect').value);
+      localStorage.setItem('pref_home', document.getElementById('homeInput').value.trim());
+      localStorage.setItem('pref_food', document.getElementById('foodInput').value.trim());
+      applyThemeAndSave();
 
       if (foundRoutes.length > 0) {
         const activeBtn = document.querySelector('.route-tab-btn.active');
@@ -410,23 +449,16 @@
     }
 
     function loadSettings() {
-      const fuel = localStorage.getItem('pref_fuel') || 'ALL';
-      const isDark = localStorage.getItem('pref_dark') === 'true'; 
-      const homeAddr = localStorage.getItem('pref_home') || '';
-      const prefFood = localStorage.getItem('pref_food') || '';
+      document.getElementById('fuelSelect').value = localStorage.getItem('pref_fuel') || 'ALL';
+      document.getElementById('homeInput').value = localStorage.getItem('pref_home') || '';
+      document.getElementById('foodInput').value = localStorage.getItem('pref_food') || '';
       
-      document.getElementById('fuelSelect').value = fuel;
-      document.getElementById('themeToggle').checked = isDark;
-      document.getElementById('homeInput').value = homeAddr;
-      document.getElementById('foodInput').value = prefFood;
-      
-      if (isDark) {
-        document.body.classList.add('dark-theme');
-        document.body.classList.remove('light-theme');
-      } else {
-        document.body.classList.add('light-theme');
-        document.body.classList.remove('dark-theme');
-      }
+      const mode = localStorage.getItem('pref_theme_mode') || 'LIGHT';
+      document.getElementById('darkConfig').value = mode;
+      document.getElementById('darkStartTime').value = localStorage.getItem('pref_dark_start') || '18:00';
+      document.getElementById('darkEndTime').value = localStorage.getItem('pref_dark_end') || '06:00';
+      document.getElementById('timeSettingBox').style.display = (mode === 'AUTO') ? 'flex' : 'none';
+      checkAutoTheme();
     }
 
     function forceAppUpdate() {
@@ -438,41 +470,27 @@
     
     function promptHomeAction() {
       const homeAddr = localStorage.getItem('pref_home');
-      if (!homeAddr) {
-        alert('설정 창(⚙️)에서 내 집 주소를 먼저 저장해주세요.');
-        openSettings();
-        return;
-      }
+      if (!homeAddr) return alert('설정 창(⚙️)에서 내 집 주소를 먼저 저장해주세요.');
       document.getElementById('homeActionOverlay').classList.add('active');
     }
 
     function setHomeAs(type) {
       document.getElementById('homeActionOverlay').classList.remove('active');
       const homeAddr = localStorage.getItem('pref_home');
-      
-      if (type === 'start') {
-        document.getElementById('startInput').value = homeAddr;
-        searchStartCoord = null; 
-        lastConfirmedStartText = null;
-      } else {
-        document.getElementById('endInput').value = homeAddr;
-        searchEndCoord = null;
-        lastConfirmedEndText = null;
-      }
+      if (type === 'start') { document.getElementById('startInput').value = homeAddr; searchStartCoord = null; lastConfirmedStartText = null; } 
+      else { document.getElementById('endInput').value = homeAddr; searchEndCoord = null; lastConfirmedEndText = null; }
     }
 
     function initUserLocation() {
-      if (!navigator.geolocation) { statusBadge.style.display = 'none'; return; }
+      if (!navigator.geolocation) return;
       if (watchId !== null) navigator.geolocation.clearWatch(watchId);
       watchId = navigator.geolocation.watchPosition(
         (pos) => {
           currentUserLatLng = [pos.coords.latitude, pos.coords.longitude];
           renderUserMarker(currentUserLatLng, pos.coords.accuracy);
           if (!map._userMoved) { map.setView(currentUserLatLng, 15); map._userMoved = true; }
-          statusBadge.style.display = 'none';
         },
-        (err) => { statusBadge.style.display = 'none'; },
-        { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+        (err) => {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
       );
     }
 
@@ -498,18 +516,12 @@
 
     document.addEventListener('click', (e) => {
       if (!e.target.closest('.input-wrapper')) {
-        startDropdown.style.display = 'none';
-        endDropdown.style.display = 'none';
-        homeDropdown.style.display = 'none';
+        startDropdown.style.display = 'none'; endDropdown.style.display = 'none'; homeDropdown.style.display = 'none';
       }
     });
 
     async function handleAutocomplete(keyword, dropdown, type) {
-      let activeTimeout;
-      if (type === 'start') activeTimeout = startTimeout;
-      else if (type === 'end') activeTimeout = endTimeout;
-      else activeTimeout = homeTimeout;
-      
+      let activeTimeout = (type === 'start') ? startTimeout : (type === 'end') ? endTimeout : homeTimeout;
       clearTimeout(activeTimeout);
       dropdown.style.display = 'none';
       if (!keyword.trim()) return;
@@ -518,11 +530,9 @@
         const results = await searchPlaces(keyword);
         if (results.length > 0) {
           dropdown.innerHTML = results.map((r, i) => `<li onclick="selectAutocompleteItem('${type}', ${i})"><div class="ac-title">${r.name}</div><div class="ac-addr">${r.address || '주소 없음'}</div></li>`).join('');
-          
           if (type === 'start') window.tempStartResults = results; 
           else if (type === 'end') window.tempEndResults = results;
           else window.tempHomeResults = results;
-          
           dropdown.style.display = 'block';
         }
       }, 400);
@@ -552,27 +562,6 @@
       startDropdown.style.display = 'none'; endDropdown.style.display = 'none';
     }
 
-    function renderMarkers(items) {
-      markersLayer.clearLayers();
-      const prefFood = localStorage.getItem('pref_food') || ''; 
-      
-      items.forEach(item => {
-        const lat = parseFloat(item.lat); const lng = parseFloat(item.lng);
-        if (isNaN(lat) || isNaN(lng)) return;
-        
-        let isFavFood = false;
-        if (prefFood && item.menu_list) {
-          isFavFood = item.menu_list.some(m => m.name && m.name.includes(prefFood));
-        }
-        
-        const customStyle = isFavFood ? 'background: #ef4444; color: white; border-color: #ef4444;' : '';
-        const iconHtml = `<div class="rest-tag" style="${customStyle}">${item.name}${isFavFood ? ' ⭐' : ''}</div><div class="rest-dot"></div>`;
-        
-        const customIcon = L.divIcon({ className: 'rest-unified-marker', html: iconHtml, iconSize: [100, 36], iconAnchor: [50, 36] });
-        L.marker([lat, lng], { icon: customIcon }).addTo(markersLayer).on('click', () => openModal(item));
-      });
-    }
-
     function categorizeMenus(menuList) {
       const categories = { '전체': menuList, '한식': [], '양식': [], '면류': [], '간식': [] };
       menuList.forEach(m => {
@@ -587,58 +576,76 @@
 
     let currentCategories = {};
 
+    /* ====== 국도 주유소 팝업 오픈 ====== */
+    function openGasModal(gasData) {
+      document.getElementById('mTitle').textContent = gasData.OS_NM;
+      document.getElementById('mRoute').textContent = gasData.NEW_ADRES || "국도 주유소";
+      document.getElementById('mBadge').style.display = 'none';
+
+      document.getElementById('gasBadge').textContent = '운영중'; document.getElementById('gasBadge').className = 'fuel-status-badge status-on';
+      document.getElementById('gasPriceVal').textContent = gasData.PRICE ? `${Number(gasData.PRICE).toLocaleString()}원` : '-';
+      document.getElementById('dieselBadge').textContent = '없음'; document.getElementById('dieselBadge').className = 'fuel-status-badge status-off';
+      document.getElementById('dieselPriceVal').textContent = '-';
+      document.getElementById('lpgBadge').textContent = '없음'; document.getElementById('lpgBadge').className = 'fuel-status-badge status-off';
+      document.getElementById('lpgPriceVal').textContent = '-';
+      document.getElementById('evBadge').textContent = '없음'; document.getElementById('evBadge').className = 'fuel-status-badge status-off';
+      document.getElementById('evSummaryVal').textContent = '-';
+      document.getElementById('evDetailBox').style.display = 'none';
+
+      document.getElementById('mBrandList').innerHTML = `<span class="brand-pill">📞 ${gasData.TEL || '전화번호 정보 없음'}</span>`;
+      document.getElementById('menuCardDiv').style.display = 'none';
+      document.getElementById('parkCardDiv').style.display = 'none';
+
+      document.getElementById('modalOverlay').classList.add('active');
+    }
+
+    /* ====== 휴게소 상세 모달 열기 (전기차 단가 포함) ====== */
     function openModal(item) {
+      document.getElementById('mBadge').style.display = 'inline-block';
+      document.getElementById('menuCardDiv').style.display = 'block';
+      document.getElementById('parkCardDiv').style.display = 'block';
+
       document.getElementById('mTitle').textContent = `${item.name} (${item.direction || ''})`;
       document.getElementById('mRoute').textContent = `${item.route_name || '고속도로'}`;
       const badge = document.getElementById('mBadge');
       badge.textContent = `혼잡도: ${item.crowded_level || '보통'}`; badge.className = `badge badge-${item.crowded_level || '보통'}`;
 
-      const gasBadge = document.getElementById('gasBadge');
-      const gasVal = document.getElementById('gasPriceVal');
+      const gasBadge = document.getElementById('gasBadge'); const gasVal = document.getElementById('gasPriceVal');
       if (item.gas_price && item.gas_price !== "X") {
         gasBadge.textContent = '운영중'; gasBadge.className = 'fuel-status-badge status-on';
         const p = Number(String(item.gas_price).replace(/,/g, '').replace(/원/g, ''));
         gasVal.textContent = isNaN(p) ? item.gas_price : `${p.toLocaleString()}원`;
       } else if (item.has_gas) {
-        gasBadge.textContent = '운영중'; gasBadge.className = 'fuel-status-badge status-on';
-        gasVal.textContent = '가격 확인중';
+        gasBadge.textContent = '운영중'; gasBadge.className = 'fuel-status-badge status-on'; gasVal.textContent = '가격 확인중';
       } else {
-        gasBadge.textContent = '없음'; gasBadge.className = 'fuel-status-badge status-off';
-        gasVal.textContent = '-';
+        gasBadge.textContent = '없음'; gasBadge.className = 'fuel-status-badge status-off'; gasVal.textContent = '-';
       }
 
-      const dieselBadge = document.getElementById('dieselBadge');
-      const dieselVal = document.getElementById('dieselPriceVal');
+      const dieselBadge = document.getElementById('dieselBadge'); const dieselVal = document.getElementById('dieselPriceVal');
       if (item.diesel_price && item.diesel_price !== "X") {
         dieselBadge.textContent = '운영중'; dieselBadge.className = 'fuel-status-badge status-on';
         const p = Number(String(item.diesel_price).replace(/,/g, '').replace(/원/g, ''));
         dieselVal.textContent = isNaN(p) ? item.diesel_price : `${p.toLocaleString()}원`;
       } else if (item.has_gas) {
-        dieselBadge.textContent = '운영중'; dieselBadge.className = 'fuel-status-badge status-on';
-        dieselVal.textContent = '가격 확인중';
+        dieselBadge.textContent = '운영중'; dieselBadge.className = 'fuel-status-badge status-on'; dieselVal.textContent = '가격 확인중';
       } else {
-        dieselBadge.textContent = '없음'; dieselBadge.className = 'fuel-status-badge status-off';
-        dieselVal.textContent = '-';
+        dieselBadge.textContent = '없음'; dieselBadge.className = 'fuel-status-badge status-off'; dieselVal.textContent = '-';
       }
 
-      const lpgBadge = document.getElementById('lpgBadge');
-      const lpgVal = document.getElementById('lpgPriceVal');
+      const lpgBadge = document.getElementById('lpgBadge'); const lpgVal = document.getElementById('lpgPriceVal');
       if (item.lpg_price && item.lpg_price !== "X") {
         lpgBadge.textContent = '운영중'; lpgBadge.className = 'fuel-status-badge status-on';
         const p = Number(String(item.lpg_price).replace(/,/g, '').replace(/원/g, ''));
         lpgVal.textContent = isNaN(p) ? item.lpg_price : `${p.toLocaleString()}원`;
       } else if (item.has_lpg) {
-        lpgBadge.textContent = '운영중'; lpgBadge.className = 'fuel-status-badge status-on';
-        lpgVal.textContent = 'LPG 가능';
+        lpgBadge.textContent = '운영중'; lpgBadge.className = 'fuel-status-badge status-on'; lpgVal.textContent = 'LPG 가능';
       } else {
-        lpgBadge.textContent = '없음'; lpgBadge.className = 'fuel-status-badge status-off';
-        lpgVal.textContent = '-';
+        lpgBadge.textContent = '없음'; lpgBadge.className = 'fuel-status-badge status-off'; lpgVal.textContent = '-';
       }
 
-      const evBadge = document.getElementById('evBadge');
-      const evVal = document.getElementById('evSummaryVal');
-      const evBox = document.getElementById('evDetailBox');
-      const evDetail = item.ev_detail;
+      const evBadge = document.getElementById('evBadge'); const evVal = document.getElementById('evSummaryVal');
+      const evBox = document.getElementById('evDetailBox'); const evDetail = item.ev_detail;
+      const evPriceInfo = document.getElementById('evPriceInfo');
 
       if (evDetail && evDetail.count > 0) {
         evBadge.textContent = '운영중'; evBadge.className = 'fuel-status-badge status-on';
@@ -648,13 +655,16 @@
         document.getElementById('evHeader').innerHTML = `🔌 충전기 총 ${evDetail.count}기 운영`;
         document.getElementById('evOperators').innerHTML = (evDetail.operators || []).map(op => `<span class="ev-op-badge">${op}</span>`).join(' ');
         document.getElementById('evOutputs').innerHTML = `스펙: ${(evDetail.outputs || []).map(o => `<span class="ev-spec-pill">${o}</span>`).join(' ')}`;
+        
+        // 대표 운영사의 단가 매핑
+        const mainOp = evDetail.operators[0] || "";
+        const expectedRate = EV_RATES[mainOp] || "약 340~350원/kWh (운영사별 상이)";
+        evPriceInfo.textContent = `💰 예상 단가: ${expectedRate}`;
       } else if (item.has_ev) {
-        evBadge.textContent = '운영중'; evBadge.className = 'fuel-status-badge status-on';
-        evVal.textContent = '충전소 운영';
+        evBadge.textContent = '운영중'; evBadge.className = 'fuel-status-badge status-on'; evVal.textContent = '충전소 운영';
         evBox.style.display = 'none';
       } else {
-        evBadge.textContent = '없음'; evBadge.className = 'fuel-status-badge status-off';
-        evVal.textContent = '-';
+        evBadge.textContent = '없음'; evBadge.className = 'fuel-status-badge status-off'; evVal.textContent = '-';
         evBox.style.display = 'none';
       }
 
@@ -752,7 +762,7 @@
     let searchStartCoord = null; let searchEndCoord = null;
     let lastConfirmedStartText = null; let lastConfirmedEndText = null;
 
-    /* ====== 1단계: 유/무료 경로 동시 탐색 처리 ====== */
+    /* ====== 1. 다중 경로 (고속도로 2개 이상 + 무료 1개) 동시 탐색 ====== */
     async function handleSearchRoute() {
       const startText = document.getElementById('startInput').value.trim();
       const endText = document.getElementById('endInput');
@@ -789,63 +799,48 @@
           searchEndCoord = chosenEnd; document.getElementById('endInput').value = searchEndCoord.name; lastConfirmedEndText = searchEndCoord.name;
         }
 
-        // 카카오내비 다중 경로 탐색 (추천 경로 & 무료 도로 우선 경로)
+        // 추천, 최단시간, 무료 경로 동시 요청
         const urlRecommend = `https://apis-navi.kakaomobility.com/v1/directions?origin=${searchStartCoord.lng},${searchStartCoord.lat}&destination=${searchEndCoord.lng},${searchEndCoord.lat}&priority=RECOMMEND`;
+        const urlTime = `https://apis-navi.kakaomobility.com/v1/directions?origin=${searchStartCoord.lng},${searchStartCoord.lat}&destination=${searchEndCoord.lng},${searchEndCoord.lat}&priority=TIME`;
         const urlFree = `https://apis-navi.kakaomobility.com/v1/directions?origin=${searchStartCoord.lng},${searchStartCoord.lat}&destination=${searchEndCoord.lng},${searchEndCoord.lat}&priority=RECOMMEND&avoid=toll`;
 
-        statusBadge.textContent = '경로 탐색 중...';
-        statusBadge.style.display = 'block';
+        statusBadge.textContent = '경로 탐색 중...'; statusBadge.style.display = 'block';
 
-        const [resRec, resFree] = await Promise.all([
+        const [resRec, resTime, resFree] = await Promise.all([
           fetch(urlRecommend, { headers: { 'Authorization': `KakaoAK ${KAKAO_REST_API_KEY}` } }),
+          fetch(urlTime, { headers: { 'Authorization': `KakaoAK ${KAKAO_REST_API_KEY}` } }),
           fetch(urlFree, { headers: { 'Authorization': `KakaoAK ${KAKAO_REST_API_KEY}` } })
         ]);
 
         if (resRec.status === 401 || resRec.status === 403) {
-          alert('카카오 API 연동 에러입니다.\n카카오 디벨로퍼스 설정에 배포된 링크를 등록해주세요.');
-          btn.textContent = '탐색'; btn.disabled = false; return;
+          alert('카카오 API 연동 에러입니다.'); btn.textContent = '탐색'; btn.disabled = false; return;
         }
 
         const dataRec = resRec.ok ? await resRec.json() : null;
+        const dataTime = resTime.ok ? await resTime.json() : null;
         const dataFree = resFree.ok ? await resFree.json() : null;
         statusBadge.style.display = 'none';
 
         foundRoutes = [];
         
-        // 추천(고속도로) 경로 파싱
-        if (dataRec && dataRec.routes && dataRec.routes.length > 0) {
-          const r = dataRec.routes[0];
+        function parseRoute(data, typeName) {
+          if (!data || !data.routes || data.routes.length === 0) return null;
+          const r = data.routes[0];
           const coords = [];
           r.sections.forEach(sec => sec.roads.forEach(road => {
             for (let i = 0; i < road.vertexes.length; i += 2) coords.push([road.vertexes[i+1], road.vertexes[i]]);
           }));
-          foundRoutes.push({ 
-            type: '추천 (고속도로)', 
-            duration: r.summary.duration, 
-            toll: r.summary.fare.toll, 
-            geometry: { coordinates: coords } 
-          });
+          return { type: typeName, duration: r.summary.duration, toll: r.summary.fare.toll, geometry: { coordinates: coords } };
         }
 
-        // 무료(국도) 경로 파싱
-        if (dataFree && dataFree.routes && dataFree.routes.length > 0) {
-          const r = dataFree.routes[0];
-          const coords = [];
-          r.sections.forEach(sec => sec.roads.forEach(road => {
-            for (let i = 0; i < road.vertexes.length; i += 2) coords.push([road.vertexes[i+1], road.vertexes[i]]);
-          }));
-          
-          // 무료 경로의 소요 시간이 추천 경로와 같다면(동일 경로) 추가 생략
-          const isSame = foundRoutes.length > 0 && foundRoutes[0].duration === r.summary.duration;
-          if (!isSame) {
-            foundRoutes.push({ 
-              type: '무료 (국도 등)', 
-              duration: r.summary.duration, 
-              toll: r.summary.fare.toll, 
-              geometry: { coordinates: coords } 
-            });
-          }
-        }
+        const route1 = parseRoute(dataRec, '추천경로');
+        if (route1) foundRoutes.push(route1);
+
+        const route2 = parseRoute(dataTime, '최단시간');
+        if (route2 && (!route1 || route2.duration !== route1.duration)) foundRoutes.push(route2);
+
+        const route3 = parseRoute(dataFree, '무료도로');
+        if (route3 && (!route1 || route3.duration !== route1.duration)) foundRoutes.push(route3);
 
         if (foundRoutes.length === 0) { alert('경로를 찾을 수 없습니다.'); btn.textContent = '탐색'; btn.disabled = false; return; }
 
@@ -865,7 +860,7 @@
         
         const btn = document.createElement('button'); 
         btn.className = `route-tab-btn ${idx === 0 ? 'active' : ''}`;
-        btn.innerHTML = `${r.type}<span>${timeStr} / 통행료 ${fareStr}</span>`; 
+        btn.innerHTML = `${r.type}<span>${timeStr} / ${fareStr}</span>`; 
         btn.onclick = () => selectActiveRoute(idx); 
         bar.appendChild(btn);
       });
@@ -878,13 +873,13 @@
       else { return !(dir.includes('하행') || dir.includes('부산') || dir.includes('목포') || dir.includes('순천') || dir.includes('창원') || dir.includes('광주')); }
     }
 
-    // 3단계: 무료 경로 국도 주유소 검색기
+    /* ====== 2. 오피넷 국도 주유소 검색 및 변환 로직 ====== */
     async function searchAndRenderGasStations(latLngs) {
       markersLayer.clearLayers();
       const checkMap = new Set();
       let accumulatedDist = 0;
       let lastPoint = latLngs[0];
-      const samplePoints = [lastPoint]; // 출발지는 무조건 샘플링
+      const samplePoints = [lastPoint];
 
       // 15km 단위로 API 검색용 좌표 샘플 추출
       for (let i = 1; i < latLngs.length; i++) {
@@ -902,83 +897,131 @@
       statusBadge.style.display = 'block';
 
       for (const pt of samplePoints) {
-        // 카테고리 OL7(주유소), 반경 3km 검색
-        const url = `https://dapi.kakao.com/v2/local/search/category.json?category_group_code=OL7&x=${pt[1]}&y=${pt[0]}&radius=3000&size=15`;
+        // WGS84 -> KATEC 좌표 변환 (오피넷 요구사항)
+        const katec = proj4('EPSG:4326', 'KATEC', [pt[1], pt[0]]);
+        const katecX = Math.round(katec[0]);
+        const katecY = Math.round(katec[1]);
+
+        const opinetUrl = `http://www.opinet.co.kr/api/aroundAll.do?code=${OPINET_API_KEY}&x=${katecX}&y=${katecY}&radius=3000&prodcd=B027&out=json`;
+        // 브라우저 CORS 회피를 위한 공용 프록시 (allorigins)
+        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(opinetUrl)}`;
+
         try {
-          const res = await fetch(url, { headers: { 'Authorization': `KakaoAK ${KAKAO_REST_API_KEY}` } });
-          const data = await res.json();
-          if (data.documents) {
-            data.documents.forEach(doc => {
-              if (!checkMap.has(doc.id)) {
-                checkMap.add(doc.id);
-                // 주유소 마커 렌더링
+          const res = await fetch(proxyUrl);
+          const proxyData = await res.json();
+          const data = JSON.parse(proxyData.contents);
+          
+          if (data.RESULT && data.RESULT.OIL) {
+            data.RESULT.OIL.forEach(oil => {
+              if (!checkMap.has(oil.UNI_ID)) {
+                checkMap.add(oil.UNI_ID);
+                // KATEC -> WGS84 재변환하여 지도에 찍기
+                const wgs84 = proj4('KATEC', 'EPSG:4326', [oil.GIS_X_COOR, oil.GIS_Y_COOR]);
+                const lat = wgs84[1]; const lng = wgs84[0];
+
                 const customIcon = L.divIcon({ 
                   className: 'rest-unified-marker', 
-                  html: `<div class="rest-tag" style="background:#ea580c; color:white; border-color:#c2410c;">⛽ ${doc.place_name}</div><div class="rest-dot" style="background:#c2410c; border-color:white;"></div>`, 
+                  html: `<div class="rest-tag" style="background:#ea580c; color:white; border-color:#c2410c; font-size:10px;">⛽ ${oil.OS_NM}</div><div class="rest-dot" style="background:#c2410c; border-color:white;"></div>`, 
                   iconSize: [120, 36], iconAnchor: [60, 36] 
                 });
-                const m = L.marker([doc.y, doc.x], { icon: customIcon }).addTo(markersLayer);
-                // 팝업 내용
-                m.bindPopup(`<b style="font-size:14px; color:#1e293b;">${doc.place_name}</b><br><span style="font-size:12px; color:#64748b;">${doc.road_address_name || doc.address_name}</span><br><br><a href="${doc.place_url}" target="_blank" style="color:#2563eb; font-size:12px; font-weight:bold; text-decoration:underline;">카카오맵 상세보기 ❯</a>`);
+                
+                L.marker([lat, lng], { icon: customIcon }).addTo(markersLayer).on('click', () => openGasModal(oil));
               }
             });
           }
-        } catch(e) {}
+        } catch(e) { console.log('오피넷 연동 지연'); }
       }
       statusBadge.style.display = 'none';
     }
 
-    /* ====== 2단계: 유/무료 경로에 따른 마커 분기 처리 ====== */
+    /* ====== 경로 선택 및 턴시그널 애니메이션 글로우 적용 ====== */
     function selectActiveRoute(targetIdx) {
       document.querySelectorAll('.route-tab-btn').forEach((b, idx) => { b.classList.toggle('active', idx === targetIdx); });
       routeLayersGroup.clearLayers(); arrowLayersGroup.clearLayers();
+      if(animFrameId) cancelAnimationFrame(animFrameId);
 
       foundRoutes.forEach((route, idx) => {
         const latLngs = route.geometry.coordinates; 
         const isSelected = (idx === targetIdx);
 
+        // 글로우 효과를 위해 두꺼운 투명선을 먼저 깔아줌
+        if (isSelected) {
+          L.polyline(latLngs, { color: '#60a5fa', weight: 16, opacity: 0.35, lineJoin: 'round' }).addTo(routeLayersGroup);
+        }
+
         const poly = L.polyline(latLngs, {
-          color: isSelected ? '#2563eb' : '#64748b', 
-          weight: isSelected ? 12 : 4,
-          opacity: isSelected ? 0.9 : 0.4,
+          color: isSelected ? '#1d4ed8' : '#94a3b8', 
+          weight: isSelected ? 6 : 4,
+          opacity: isSelected ? 1 : 0.4,
           dashArray: isSelected ? null : '5, 5'
         }).addTo(routeLayersGroup);
 
         if (isSelected) {
           poly.bringToFront(); map.fitBounds(poly.getBounds(), { padding: [25, 25] });
 
-          L.polylineDecorator(poly, {
+          const arrowLayer = L.polylineDecorator(poly, {
             patterns: [{
-              offset: 25, repeat: 80,
+              offset: 0, repeat: 80,
               symbol: L.Symbol.arrowHead({ pixelSize: 10, polygon: false, pathOptions: { stroke: true, weight: 3, color: '#ffffff', opacity: 1 } })
             }]
           }).addTo(arrowLayersGroup);
 
-          // 유/무료 경로에 따른 분기 로직
+          // 3. 턴시그널 화살표 애니메이션
+          function animateArrows() {
+            arrowOffset = (arrowOffset + 0.5) % 80;
+            const p = arrowLayer.options.patterns;
+            p[0].offset = arrowOffset;
+            arrowLayer.setPatterns(p);
+            animFrameId = requestAnimationFrame(animateArrows);
+          }
+          animateArrows();
+
           if (route.type.includes('무료')) {
-             // 무료 경로 선택 시 -> 주변 국도 주유소 탐색 실행
              searchAndRenderGasStations(latLngs);
           } else {
-             // 추천(유료) 경로 선택 시 -> 기존 고속도로 휴게소 탐색 실행
              const isSouthBound = (searchStartCoord && searchEndCoord) ? (searchStartCoord.lat > searchEndCoord.lat) : true;
              const prefFuel = document.getElementById('fuelSelect').value; 
+             const prefFood = localStorage.getItem('pref_food') || ''; 
 
-             const filtered = allRestAreas.filter(item => {
+             markersLayer.clearLayers();
+
+             // 휴게소 마커 렌더링
+             allRestAreas.forEach(item => {
                const rLat = parseFloat(item.lat); const rLng = parseFloat(item.lng);
-               if (isNaN(rLat) || isNaN(rLng)) return false;
-               
-               if (prefFuel === 'GAS' && !item.has_gas) return false;
-               if (prefFuel === 'LPG' && !item.has_lpg) return false;
-               if (prefFuel === 'EV' && !item.has_ev) return false;
+               if (isNaN(rLat) || isNaN(rLng)) return;
+               if (prefFuel === 'GAS' && !item.has_gas) return;
+               if (prefFuel === 'LPG' && !item.has_lpg) return;
+               if (prefFuel === 'EV' && !item.has_ev) return;
 
                const p = [rLat, rLng]; let onPath = false;
                for (let i = 0; i < latLngs.length - 1; i++) {
                  if (distToSegment(p, latLngs[i], latLngs[i + 1]) <= 1.8) { onPath = true; break; }
                }
-               if (!onPath) return false;
-               return isRightDirection(item, isSouthBound);
+               if (!onPath || !isRightDirection(item, isSouthBound)) return;
+
+               let isFavFood = false;
+               if (prefFood && item.menu_list) isFavFood = item.menu_list.some(m => m.name && m.name.includes(prefFood));
+               const customStyle = isFavFood ? 'background: #ef4444; color: white; border-color: #ef4444;' : '';
+               const iconHtml = `<div class="rest-tag" style="${customStyle}">${item.name}${isFavFood ? ' ⭐' : ''}</div><div class="rest-dot"></div>`;
+               const customIcon = L.divIcon({ className: 'rest-unified-marker', html: iconHtml, iconSize: [100, 36], iconAnchor: [50, 36] });
+               L.marker([rLat, rLng], { icon: customIcon }).addTo(markersLayer).on('click', () => openModal(item));
              });
-             renderMarkers(filtered);
+
+             // 졸음쉼터 마커 렌더링 (drowsy_areas.json 로드 시)
+             allDrowsyAreas.forEach(item => {
+               const rLat = parseFloat(item.lat); const rLng = parseFloat(item.lng);
+               if (isNaN(rLat) || isNaN(rLng)) return;
+               const p = [rLat, rLng]; let onPath = false;
+               for (let i = 0; i < latLngs.length - 1; i++) {
+                 if (distToSegment(p, latLngs[i], latLngs[i + 1]) <= 1.8) { onPath = true; break; }
+               }
+               if (!onPath || !isRightDirection(item, isSouthBound)) return;
+
+               const iconHtml = `<div class="rest-tag" style="background:#fcd34d; color:#78350f; border-color:#d97706; font-size:10px;">💤 ${item.name}</div><div class="rest-dot" style="background:#fcd34d; border-color:#d97706;"></div>`;
+               const customIcon = L.divIcon({ className: 'rest-unified-marker', html: iconHtml, iconSize: [100, 36], iconAnchor: [50, 36] });
+               const m = L.marker([rLat, rLng], { icon: customIcon }).addTo(markersLayer);
+               m.bindPopup(`<b style="font-size:14px;">${item.name}</b><br><span style="font-size:12px; color:#64748b;">휴식 전용 졸음쉼터</span>`);
+             });
           }
         }
       });
@@ -989,6 +1032,7 @@
       document.getElementById('routeSelectorBar').style.display = 'none';
       startDropdown.style.display = 'none'; endDropdown.style.display = 'none';
       routeLayersGroup.clearLayers(); arrowLayersGroup.clearLayers(); markersLayer.clearLayers();
+      if(animFrameId) cancelAnimationFrame(animFrameId);
       document.getElementById('startInput').value = ''; document.getElementById('endInput').value = '';
       searchStartCoord = null; searchEndCoord = null;
       lastConfirmedStartText = null; lastConfirmedEndText = null;
