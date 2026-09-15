@@ -24,6 +24,7 @@
     .rest-tag { background: #ffffff; color: #2563eb; border: 1px solid #2563eb; }
     .btn-location { background: #ffffff; border: 2px solid #38bdf8; color: #38bdf8; }
 
+    /* --- [다크 모드 완벽 적용 (눈부심 방지)] --- */
     body.dark-theme { background: #0f172a; color: white; }
     body.dark-theme #splash-screen { background-color: #0f172a; color: white; }
     body.dark-theme #splash-screen p { color: #94a3b8; }
@@ -35,6 +36,21 @@
     body.dark-theme .btn-location { background: #0f172a; border: 2px solid #38bdf8; }
     body.dark-theme .leaflet-tile-pane { filter: invert(100%) hue-rotate(180deg) brightness(85%) contrast(90%); }
     body.dark-theme .dev-text { color: #cbd5e1 !important; }
+    
+    /* 모달 및 배경 다크모드 덮어쓰기 */
+    body.dark-theme .modal-content { background: #0f172a; color: white; }
+    body.dark-theme .place-select-box { background: #0f172a; color: white; border: 1px solid #334155; }
+    body.dark-theme .place-select-box h3 { color: white !important; }
+    body.dark-theme .place-item { background: #1e293b; border-color: #334155; color: white; }
+    body.dark-theme .place-item-title { color: white; }
+    body.dark-theme .setting-row select, 
+    body.dark-theme .setting-row input[type="text"], 
+    body.dark-theme .setting-row input[type="time"] { background: #1e293b; color: white; border-color: #475569; }
+    
+    body.dark-theme .autocomplete-dropdown { background: #1e293b; border-color: #475569; color: white; }
+    body.dark-theme .autocomplete-dropdown li { border-bottom-color: #334155; color: white; }
+    body.dark-theme .autocomplete-dropdown li:hover { background: #334155; }
+    body.dark-theme .ac-title { color: white; }
 
     #splash-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; transition: opacity 0.5s ease; }
     #splash-screen h1 { font-size: 32px; font-weight: 900; color: #38bdf8; margin-bottom: 10px; }
@@ -192,23 +208,24 @@
           <h4>🚙 맞춤 정보 및 목적지</h4>
           <div class="setting-row">
             <span>내 차 연료 필터</span>
-            <select id="fuelSelect">
+            <select id="fuelSelect" style="width: 140px;">
               <option value="ALL">모두 보기 (기본)</option>
               <option value="GAS">주유소(휘발유/경유) 우선</option>
               <option value="LPG">LPG 충전소 우선</option>
               <option value="EV">전기차 충전소 우선</option>
             </select>
           </div>
+          <!-- 집 주소 입력 칸 길이 및 디자인 개선 -->
           <div class="setting-row">
             <span>🏠 내 집 주소 저장</span>
-            <div class="input-wrapper" style="width: 150px; position: relative;">
-              <input type="text" id="homeInput" class="input-box" placeholder="예: 강남구 테헤란로" autocomplete="off" style="text-align: left;" />
+            <div class="input-wrapper" style="width: 140px; position: relative;">
+              <input type="text" id="homeInput" class="input-box" placeholder="동/도로명 입력" autocomplete="off" style="text-align: left;" />
               <ul id="homeDropdown" class="autocomplete-dropdown" style="width: 100%; right: 0; left: auto; max-height: 150px;"></ul>
             </div>
           </div>
           <div class="setting-row" style="margin-bottom: 0;">
             <span>🍜 선호 음식(메뉴) 강조</span>
-            <input type="text" id="foodInput" class="input-box" placeholder="예: 우동" style="width: 150px; text-align: left;" />
+            <input type="text" id="foodInput" class="input-box" placeholder="예: 우동" style="width: 140px; text-align: left;" />
           </div>
           <div class="setting-row" style="justify-content: flex-end; margin-top: 10px; margin-bottom: 0;">
             <button class="btn-search" style="background:#2563eb;" onclick="saveSettingsBtn()">💾 설정 저장</button>
@@ -219,7 +236,7 @@
           <h4>📱 테마 화면 설정</h4>
           <div class="setting-row">
             <span>다크 모드 강제/자동 선택</span>
-            <select id="darkConfig" onchange="applyThemeAndSave()">
+            <select id="darkConfig" onchange="applyThemeAndSave()" style="width: 140px;">
               <option value="LIGHT">항상 밝게</option>
               <option value="DARK">항상 어둡게</option>
               <option value="AUTO">시간대 자동 (야간주행용)</option>
@@ -357,7 +374,7 @@
 
     fetch('rest_areas_master.json?v=' + Date.now(), { cache: 'no-store' }).then(res => res.json()).then(data => { allRestAreas = data; initUserLocation(); }).catch(e => {});
 
-    // [1번 문제 해결] 지도 확대/축소 시 화살표 애니메이션 일시정지 (떨림 방지)
+    // 지도 줌(확대/축소) 시 화살표 떨림 완전 방지 로직
     map.on('zoomstart', () => { if (animTimerId) clearInterval(animTimerId); });
     map.on('zoomend', () => {
       if (currentArrowLayer && foundRoutes.length > 0) {
@@ -456,14 +473,9 @@
     function goToCurrentLocation() { if (currentUserLatLng) { map.setView(currentUserLatLng, 15); } initUserLocation(); }
 
     let startTimeout, endTimeout, homeTimeout;
-    const startInput = document.getElementById('startInput');
-    const endInput = document.getElementById('endInput');
-    const homeInput = document.getElementById('homeInput');
-    const startDropdown = document.getElementById('startDropdown');
-    const endDropdown = document.getElementById('endDropdown');
-    const homeDropdown = document.getElementById('homeDropdown');
+    const startInput = document.getElementById('startInput'); const endInput = document.getElementById('endInput'); const homeInput = document.getElementById('homeInput');
+    const startDropdown = document.getElementById('startDropdown'); const endDropdown = document.getElementById('endDropdown'); const homeDropdown = document.getElementById('homeDropdown');
 
-    // 검색 시 겹침 방지 임시 숨김 처리
     [startInput, endInput].forEach(input => {
       input.addEventListener('focus', () => {
         const bar = document.getElementById('routeSelectorBar');
@@ -681,7 +693,7 @@
       else { map.removeLayer(gasMarkersLayer); document.getElementById('toggleGasBtn').style.background = '#64748b'; document.getElementById('toggleGasBtn').style.opacity = '0.5'; }
     }
 
-    // [2번 문제 해결] 카카오 로컬 API 기반 안정적 주유소 탐색
+    // 카카오 로컬 API 기반 안정적 주유소 탐색
     async function searchAndRenderGasStations(latLngs) {
       gasMarkersLayer.clearLayers(); const checkMap = new Set();
       const samplePoints = getSamplePoints(latLngs, 15);
@@ -703,7 +715,7 @@
       statusBadge.style.display = 'none'; document.getElementById('toggleGasBtn').style.display = 'flex';
     }
 
-    // [2번 문제 해결] 주유소 클릭 시 1회 실시간 가격 호출 (차단 원천방지)
+    // 주유소 클릭 시 1회 실시간 가격 호출 (오피넷 연동)
     async function openDynamicGasModal(st) {
       document.getElementById('mTitle').textContent = st.place_name; document.getElementById('mRoute').textContent = st.road_address_name || st.address_name;
       document.getElementById('mBadge').style.display = 'none'; document.getElementById('foodCardDiv').style.display = 'block'; document.getElementById('menuCardDiv').style.display = 'none'; document.getElementById('parkCardDiv').style.display = 'none';
@@ -733,7 +745,7 @@
       } catch(e) { gasVal.textContent = '통신 지연'; }
     }
 
-    // [3번 문제 해결] 카카오 로컬 API 활용 졸음쉼터 실시간 탐색 (JSON 불필요)
+    // 카카오 로컬 API 활용 졸음쉼터 실시간 탐색
     async function searchAndRenderDrowsyAreas(latLngs) {
       const checkMap = new Set(); const samplePoints = getSamplePoints(latLngs, 20);
       const fetchPromises = samplePoints.map(async (pt) => {
