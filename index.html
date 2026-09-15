@@ -58,9 +58,10 @@
     
     .btn-location { position: absolute; right: 15px; z-index: 1100; width: 46px; height: 46px; border-radius: 50%; font-size: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); bottom: 25px; }
 
-    #routeSelectorBar { display: none; position: absolute; top: 64px; left: 50%; transform: translateX(-50%); z-index: 1000; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(6px); padding: 5px 8px; border-radius: 20px; border: 1px solid #38bdf8; box-shadow: 0 4px 15px rgba(0,0,0,0.2); gap: 6px; max-width: 95vw; overflow-x: auto; }
+    #routeSelectorBar { display: none; position: absolute; top: 64px; left: 50%; transform: translateX(-50%); z-index: 1000; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(6px); padding: 6px; border-radius: 16px; border: 1px solid #38bdf8; box-shadow: 0 4px 15px rgba(0,0,0,0.2); gap: 6px; width: 90vw; overflow-x: auto; }
     body.dark-theme #routeSelectorBar { background: rgba(15, 23, 42, 0.92); }
-    .route-tab-btn { padding: 5px 10px; border-radius: 14px; border: none; font-size: 11px; font-weight: 700; background: transparent; color: #64748b; cursor: pointer; white-space: nowrap; }
+    .route-tab-btn { flex: 1; padding: 6px 4px; border-radius: 10px; border: none; font-size: 13px; font-weight: 800; background: transparent; color: #64748b; cursor: pointer; text-align: center; line-height: 1.3; }
+    .route-tab-btn span { font-size: 11px; font-weight: 600; opacity: 0.8; display: block; margin-top: 2px; }
     .route-tab-btn.active { background: #2563eb; color: white; box-shadow: 0 2px 6px rgba(37,99,235,0.5); }
 
     #map { height: calc(100vh - 56px); width: 100vw; z-index: 1; }
@@ -111,7 +112,6 @@
     body.dark-theme .food-name { color: #f8fafc; }
     .food-price { font-size: 13px; font-weight: 800; color: #d97706; margin-top: 2px; }
 
-    /* 에너지 & 주유 그리드 스타일 */
     .fuel-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 10px; }
     .fuel-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 3px; }
     body.dark-theme .fuel-card { background: #0f172a; border-color: #334155; }
@@ -136,6 +136,9 @@
     input:checked + .slider:before { transform: translateX(20px); }
     
     .dev-text { font-size: 12px; color: #475569; line-height: 1.6; }
+
+    /* 카카오맵 팝업용 커스텀 스타일 */
+    .leaflet-popup-content { margin: 12px !important; line-height: 1.4; }
   </style>
 </head>
 <body class="light-theme">
@@ -244,7 +247,6 @@
           <div class="dev-text">
             <b>• 개발자:</b> L.H.H<br>
             <b>• Mail:</b> xellosmx@naver.com<br>
-           
           </div>
         </div>
 
@@ -273,12 +275,10 @@
       </div>
       <div class="modal-body">
         
-        <!-- ⛽ 종합 에너지 & 주유소 유가 정보 영역 -->
         <div class="fact-card" style="border-left: 4px solid #f97316;">
           <h4>⛽ 주유소 및 충전소 안내</h4>
           
           <div class="fuel-grid">
-            <!-- 휘발유 -->
             <div class="fuel-card">
               <div class="fuel-title">
                 <span>🔴 휘발유</span>
@@ -287,7 +287,6 @@
               <div id="gasPriceVal" class="fuel-val">-</div>
             </div>
 
-            <!-- 경유 -->
             <div class="fuel-card">
               <div class="fuel-title">
                 <span>🔵 경유 (디젤)</span>
@@ -296,7 +295,6 @@
               <div id="dieselPriceVal" class="fuel-val">-</div>
             </div>
 
-            <!-- LPG -->
             <div class="fuel-card">
               <div class="fuel-title">
                 <span>🟠 LPG 충전소</span>
@@ -305,7 +303,6 @@
               <div id="lpgPriceVal" class="fuel-val">-</div>
             </div>
 
-            <!-- 전기차 충전소 -->
             <div class="fuel-card">
               <div class="fuel-title">
                 <span>⚡ 전기차 (EV)</span>
@@ -315,7 +312,6 @@
             </div>
           </div>
 
-          <!-- 전기차 세부 스펙 박스 (운영사 및 출력) -->
           <div id="evDetailBox" class="ev-box" style="display:none; margin-top:6px;">
             <div id="evHeader" style="font-size: 12px; font-weight: 800; color: #15803d; margin-bottom: 4px;"></div>
             <div id="evOperators" style="margin-bottom: 4px;"></div>
@@ -376,7 +372,6 @@
       .then(data => { allRestAreas = data; statusBadge.textContent = '내 위치 확인 중...'; statusBadge.style.display = 'block'; initUserLocation(); })
       .catch(err => { statusBadge.textContent = 'JSON 로드 실패'; statusBadge.style.display = 'block'; });
 
-    /* ====== 앱 설정 (로컬 스토리지) ====== */
     function openSettings() { document.getElementById('settingsOverlay').classList.add('active'); }
     function closeSettings() { document.getElementById('settingsOverlay').classList.remove('active'); }
     function handleSettingsClick(e) { if (e.target.id === 'settingsOverlay') closeSettings(); }
@@ -488,7 +483,6 @@
     }
     function goToCurrentLocation() { if (currentUserLatLng) { map.setView(currentUserLatLng, 15); } initUserLocation(); }
 
-    /* ====== 자동완성 (집 주소 포함) ====== */
     let startTimeout, endTimeout, homeTimeout;
     const startInput = document.getElementById('startInput');
     const endInput = document.getElementById('endInput');
@@ -593,19 +587,17 @@
 
     let currentCategories = {};
 
-    /* ====== 휴게소 상세 모달 열기 (종합 연료 정보 탑재) ====== */
     function openModal(item) {
       document.getElementById('mTitle').textContent = `${item.name} (${item.direction || ''})`;
       document.getElementById('mRoute').textContent = `${item.route_name || '고속도로'}`;
       const badge = document.getElementById('mBadge');
       badge.textContent = `혼잡도: ${item.crowded_level || '보통'}`; badge.className = `badge badge-${item.crowded_level || '보통'}`;
 
-     // 1. 휘발유 정보 매핑
       const gasBadge = document.getElementById('gasBadge');
       const gasVal = document.getElementById('gasPriceVal');
-      if (item.gas_price) {
+      if (item.gas_price && item.gas_price !== "X") {
         gasBadge.textContent = '운영중'; gasBadge.className = 'fuel-status-badge status-on';
-        const p = Number(String(item.gas_price).replace(/,/g, ''));
+        const p = Number(String(item.gas_price).replace(/,/g, '').replace(/원/g, ''));
         gasVal.textContent = isNaN(p) ? item.gas_price : `${p.toLocaleString()}원`;
       } else if (item.has_gas) {
         gasBadge.textContent = '운영중'; gasBadge.className = 'fuel-status-badge status-on';
@@ -615,12 +607,11 @@
         gasVal.textContent = '-';
       }
 
-      // 2. 경유 (디젤) 정보 매핑
       const dieselBadge = document.getElementById('dieselBadge');
       const dieselVal = document.getElementById('dieselPriceVal');
-      if (item.diesel_price) {
+      if (item.diesel_price && item.diesel_price !== "X") {
         dieselBadge.textContent = '운영중'; dieselBadge.className = 'fuel-status-badge status-on';
-        const p = Number(String(item.diesel_price).replace(/,/g, ''));
+        const p = Number(String(item.diesel_price).replace(/,/g, '').replace(/원/g, ''));
         dieselVal.textContent = isNaN(p) ? item.diesel_price : `${p.toLocaleString()}원`;
       } else if (item.has_gas) {
         dieselBadge.textContent = '운영중'; dieselBadge.className = 'fuel-status-badge status-on';
@@ -630,12 +621,11 @@
         dieselVal.textContent = '-';
       }
 
-      // 3. LPG 충전소 정보 매핑
       const lpgBadge = document.getElementById('lpgBadge');
       const lpgVal = document.getElementById('lpgPriceVal');
-      if (item.lpg_price) {
+      if (item.lpg_price && item.lpg_price !== "X") {
         lpgBadge.textContent = '운영중'; lpgBadge.className = 'fuel-status-badge status-on';
-        const p = Number(String(item.lpg_price).replace(/,/g, ''));
+        const p = Number(String(item.lpg_price).replace(/,/g, '').replace(/원/g, ''));
         lpgVal.textContent = isNaN(p) ? item.lpg_price : `${p.toLocaleString()}원`;
       } else if (item.has_lpg) {
         lpgBadge.textContent = '운영중'; lpgBadge.className = 'fuel-status-badge status-on';
@@ -645,7 +635,6 @@
         lpgVal.textContent = '-';
       }
 
-      // 4. 전기차(EV) 충전소 정보 매핑
       const evBadge = document.getElementById('evBadge');
       const evVal = document.getElementById('evSummaryVal');
       const evBox = document.getElementById('evDetailBox');
@@ -669,11 +658,9 @@
         evBox.style.display = 'none';
       }
 
-      // 브랜드 매장 렌더링
       const brands = item.brand_list || [];
       document.getElementById('mBrandList').innerHTML = brands.length > 0 ? brands.map(b => `<span class="brand-pill">☕ ${b.name} <small>(${b.hours})</small></span>`).join('') : '<span style="font-size:11px; color:#94a3b8;">입점 브랜드 정보 없음</span>';
 
-      // 푸드코트 메뉴 렌더링
       const menuList = item.menu_list || [];
       if (menuList.length > 0) {
         currentCategories = categorizeMenus(menuList);
@@ -686,7 +673,6 @@
         document.getElementById('mMenuGrid').innerHTML = `<div style="font-size:12px; color:#64748b; padding:10px;">${item.best_food || '식당가 운영 중'}</div>`;
       }
 
-      // 주차장 세부 정보
       document.getElementById('mTotalPark').textContent = item.parking_count || ((item.parking_detail?.small||0) + (item.parking_detail?.large||0));
       document.getElementById('mSmallPark').textContent = item.parking_detail?.small || 0;
       document.getElementById('mLargePark').textContent = item.parking_detail?.large || 0;
@@ -766,6 +752,7 @@
     let searchStartCoord = null; let searchEndCoord = null;
     let lastConfirmedStartText = null; let lastConfirmedEndText = null;
 
+    /* ====== 1단계: 유/무료 경로 동시 탐색 처리 ====== */
     async function handleSearchRoute() {
       const startText = document.getElementById('startInput').value.trim();
       const endText = document.getElementById('endInput');
@@ -802,26 +789,66 @@
           searchEndCoord = chosenEnd; document.getElementById('endInput').value = searchEndCoord.name; lastConfirmedEndText = searchEndCoord.name;
         }
 
-        const routeUrl = `https://apis-navi.kakaomobility.com/v1/directions?origin=${searchStartCoord.lng},${searchStartCoord.lat}&destination=${searchEndCoord.lng},${searchEndCoord.lat}&priority=RECOMMEND`;
-        const routeRes = await fetch(routeUrl, { headers: { 'Authorization': `KakaoAK ${KAKAO_REST_API_KEY}` } });
+        // 카카오내비 다중 경로 탐색 (추천 경로 & 무료 도로 우선 경로)
+        const urlRecommend = `https://apis-navi.kakaomobility.com/v1/directions?origin=${searchStartCoord.lng},${searchStartCoord.lat}&destination=${searchEndCoord.lng},${searchEndCoord.lat}&priority=RECOMMEND`;
+        const urlFree = `https://apis-navi.kakaomobility.com/v1/directions?origin=${searchStartCoord.lng},${searchStartCoord.lat}&destination=${searchEndCoord.lng},${searchEndCoord.lat}&priority=RECOMMEND&avoid=toll`;
 
-        if (routeRes.status === 401 || routeRes.status === 403) {
-          alert('카카오 API 연동 에러입니다.\n카카오 디벨로퍼스 [플랫폼] - [Web] 설정에 배포된 링크를 등록해주세요.');
+        statusBadge.textContent = '경로 탐색 중...';
+        statusBadge.style.display = 'block';
+
+        const [resRec, resFree] = await Promise.all([
+          fetch(urlRecommend, { headers: { 'Authorization': `KakaoAK ${KAKAO_REST_API_KEY}` } }),
+          fetch(urlFree, { headers: { 'Authorization': `KakaoAK ${KAKAO_REST_API_KEY}` } })
+        ]);
+
+        if (resRec.status === 401 || resRec.status === 403) {
+          alert('카카오 API 연동 에러입니다.\n카카오 디벨로퍼스 설정에 배포된 링크를 등록해주세요.');
           btn.textContent = '탐색'; btn.disabled = false; return;
         }
 
-        const routeData = await routeRes.json();
-        if (!routeData.routes || routeData.routes.length === 0) { alert('경로를 찾을 수 없습니다.'); btn.textContent = '탐색'; btn.disabled = false; return; }
+        const dataRec = resRec.ok ? await resRec.json() : null;
+        const dataFree = resFree.ok ? await resFree.json() : null;
+        statusBadge.style.display = 'none';
 
-        const kakaoRoute = routeData.routes[0];
-        const coords = [];
-        kakaoRoute.sections.forEach(section => {
-          section.roads.forEach(road => {
-            for (let i = 0; i < road.vertexes.length; i += 2) { coords.push([road.vertexes[i+1], road.vertexes[i]]); }
+        foundRoutes = [];
+        
+        // 추천(고속도로) 경로 파싱
+        if (dataRec && dataRec.routes && dataRec.routes.length > 0) {
+          const r = dataRec.routes[0];
+          const coords = [];
+          r.sections.forEach(sec => sec.roads.forEach(road => {
+            for (let i = 0; i < road.vertexes.length; i += 2) coords.push([road.vertexes[i+1], road.vertexes[i]]);
+          }));
+          foundRoutes.push({ 
+            type: '추천 (고속도로)', 
+            duration: r.summary.duration, 
+            toll: r.summary.fare.toll, 
+            geometry: { coordinates: coords } 
           });
-        });
+        }
 
-        foundRoutes = [{ distance: kakaoRoute.summary.distance, duration: kakaoRoute.summary.duration, geometry: { coordinates: coords } }];
+        // 무료(국도) 경로 파싱
+        if (dataFree && dataFree.routes && dataFree.routes.length > 0) {
+          const r = dataFree.routes[0];
+          const coords = [];
+          r.sections.forEach(sec => sec.roads.forEach(road => {
+            for (let i = 0; i < road.vertexes.length; i += 2) coords.push([road.vertexes[i+1], road.vertexes[i]]);
+          }));
+          
+          // 무료 경로의 소요 시간이 추천 경로와 같다면(동일 경로) 추가 생략
+          const isSame = foundRoutes.length > 0 && foundRoutes[0].duration === r.summary.duration;
+          if (!isSame) {
+            foundRoutes.push({ 
+              type: '무료 (국도 등)', 
+              duration: r.summary.duration, 
+              toll: r.summary.fare.toll, 
+              geometry: { coordinates: coords } 
+            });
+          }
+        }
+
+        if (foundRoutes.length === 0) { alert('경로를 찾을 수 없습니다.'); btn.textContent = '탐색'; btn.disabled = false; return; }
+
         setupRouteSelectorBar(foundRoutes);
         selectActiveRoute(0);
 
@@ -834,8 +861,13 @@
       routes.forEach((r, idx) => {
         const hours = Math.floor(r.duration / 3600); const mins = Math.floor((r.duration % 3600) / 60);
         const timeStr = hours > 0 ? `${hours}시간 ${mins}분` : `${mins}분`;
-        const btn = document.createElement('button'); btn.className = `route-tab-btn ${idx === 0 ? 'active' : ''}`;
-        btn.innerHTML = `경로 ${idx + 1} (${timeStr})`; btn.onclick = () => selectActiveRoute(idx); bar.appendChild(btn);
+        const fareStr = r.toll > 0 ? `${r.toll.toLocaleString()}원` : '무료';
+        
+        const btn = document.createElement('button'); 
+        btn.className = `route-tab-btn ${idx === 0 ? 'active' : ''}`;
+        btn.innerHTML = `${r.type}<span>${timeStr} / 통행료 ${fareStr}</span>`; 
+        btn.onclick = () => selectActiveRoute(idx); 
+        bar.appendChild(btn);
       });
     }
 
@@ -846,6 +878,57 @@
       else { return !(dir.includes('하행') || dir.includes('부산') || dir.includes('목포') || dir.includes('순천') || dir.includes('창원') || dir.includes('광주')); }
     }
 
+    // 3단계: 무료 경로 국도 주유소 검색기
+    async function searchAndRenderGasStations(latLngs) {
+      markersLayer.clearLayers();
+      const checkMap = new Set();
+      let accumulatedDist = 0;
+      let lastPoint = latLngs[0];
+      const samplePoints = [lastPoint]; // 출발지는 무조건 샘플링
+
+      // 15km 단위로 API 검색용 좌표 샘플 추출
+      for (let i = 1; i < latLngs.length; i++) {
+        const d = getDistance(lastPoint[0], lastPoint[1], latLngs[i][0], latLngs[i][1]);
+        accumulatedDist += d;
+        if (accumulatedDist >= 15) {
+          samplePoints.push(latLngs[i]);
+          accumulatedDist = 0;
+        }
+        lastPoint = latLngs[i];
+      }
+      if (samplePoints.length === 1) samplePoints.push(latLngs[latLngs.length - 1]);
+
+      statusBadge.textContent = '국도 주변 주유소 탐색 중...';
+      statusBadge.style.display = 'block';
+
+      for (const pt of samplePoints) {
+        // 카테고리 OL7(주유소), 반경 3km 검색
+        const url = `https://dapi.kakao.com/v2/local/search/category.json?category_group_code=OL7&x=${pt[1]}&y=${pt[0]}&radius=3000&size=15`;
+        try {
+          const res = await fetch(url, { headers: { 'Authorization': `KakaoAK ${KAKAO_REST_API_KEY}` } });
+          const data = await res.json();
+          if (data.documents) {
+            data.documents.forEach(doc => {
+              if (!checkMap.has(doc.id)) {
+                checkMap.add(doc.id);
+                // 주유소 마커 렌더링
+                const customIcon = L.divIcon({ 
+                  className: 'rest-unified-marker', 
+                  html: `<div class="rest-tag" style="background:#ea580c; color:white; border-color:#c2410c;">⛽ ${doc.place_name}</div><div class="rest-dot" style="background:#c2410c; border-color:white;"></div>`, 
+                  iconSize: [120, 36], iconAnchor: [60, 36] 
+                });
+                const m = L.marker([doc.y, doc.x], { icon: customIcon }).addTo(markersLayer);
+                // 팝업 내용
+                m.bindPopup(`<b style="font-size:14px; color:#1e293b;">${doc.place_name}</b><br><span style="font-size:12px; color:#64748b;">${doc.road_address_name || doc.address_name}</span><br><br><a href="${doc.place_url}" target="_blank" style="color:#2563eb; font-size:12px; font-weight:bold; text-decoration:underline;">카카오맵 상세보기 ❯</a>`);
+              }
+            });
+          }
+        } catch(e) {}
+      }
+      statusBadge.style.display = 'none';
+    }
+
+    /* ====== 2단계: 유/무료 경로에 따른 마커 분기 처리 ====== */
     function selectActiveRoute(targetIdx) {
       document.querySelectorAll('.route-tab-btn').forEach((b, idx) => { b.classList.toggle('active', idx === targetIdx); });
       routeLayersGroup.clearLayers(); arrowLayersGroup.clearLayers();
@@ -871,26 +954,32 @@
             }]
           }).addTo(arrowLayersGroup);
 
-          const isSouthBound = (searchStartCoord && searchEndCoord) ? (searchStartCoord.lat > searchEndCoord.lat) : true;
-          const prefFuel = document.getElementById('fuelSelect').value; 
+          // 유/무료 경로에 따른 분기 로직
+          if (route.type.includes('무료')) {
+             // 무료 경로 선택 시 -> 주변 국도 주유소 탐색 실행
+             searchAndRenderGasStations(latLngs);
+          } else {
+             // 추천(유료) 경로 선택 시 -> 기존 고속도로 휴게소 탐색 실행
+             const isSouthBound = (searchStartCoord && searchEndCoord) ? (searchStartCoord.lat > searchEndCoord.lat) : true;
+             const prefFuel = document.getElementById('fuelSelect').value; 
 
-          const filtered = allRestAreas.filter(item => {
-            const rLat = parseFloat(item.lat); const rLng = parseFloat(item.lng);
-            if (isNaN(rLat) || isNaN(rLng)) return false;
-            
-            // 연료 필터링 분기
-            if (prefFuel === 'GAS' && !item.has_gas) return false;
-            if (prefFuel === 'LPG' && !item.has_lpg) return false;
-            if (prefFuel === 'EV' && !item.has_ev) return false;
+             const filtered = allRestAreas.filter(item => {
+               const rLat = parseFloat(item.lat); const rLng = parseFloat(item.lng);
+               if (isNaN(rLat) || isNaN(rLng)) return false;
+               
+               if (prefFuel === 'GAS' && !item.has_gas) return false;
+               if (prefFuel === 'LPG' && !item.has_lpg) return false;
+               if (prefFuel === 'EV' && !item.has_ev) return false;
 
-            const p = [rLat, rLng]; let onPath = false;
-            for (let i = 0; i < latLngs.length - 1; i++) {
-              if (distToSegment(p, latLngs[i], latLngs[i + 1]) <= 1.8) { onPath = true; break; }
-            }
-            if (!onPath) return false;
-            return isRightDirection(item, isSouthBound);
-          });
-          renderMarkers(filtered);
+               const p = [rLat, rLng]; let onPath = false;
+               for (let i = 0; i < latLngs.length - 1; i++) {
+                 if (distToSegment(p, latLngs[i], latLngs[i + 1]) <= 1.8) { onPath = true; break; }
+               }
+               if (!onPath) return false;
+               return isRightDirection(item, isSouthBound);
+             });
+             renderMarkers(filtered);
+          }
         }
       });
     }
