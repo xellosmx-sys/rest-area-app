@@ -22,7 +22,6 @@
     .btn-swap { background: #e2e8f0; border: 1px solid #cbd5e1; color: #2563eb; }
     .btn-settings { background: #e2e8f0; border: 1px solid #cbd5e1; color: #1e293b; }
     .rest-tag { background: #ffffff; color: #2563eb; border: 1px solid #2563eb; }
-    .btn-location { background: #ffffff; border: 2px solid #38bdf8; color: #38bdf8; }
 
     /* 다크 모드 완벽 적용 */
     body.dark-theme { background: #0f172a; color: white; }
@@ -33,7 +32,6 @@
     body.dark-theme .btn-swap { background: #334155; border: 1px solid #475569; color: #38bdf8; }
     body.dark-theme .btn-settings { background: #334155; border: 1px solid #475569; color: white; }
     body.dark-theme .rest-tag { background: #0f172a; color: #38bdf8; border: 1px solid #38bdf8; }
-    body.dark-theme .btn-location { background: #0f172a; border: 2px solid #38bdf8; }
     body.dark-theme .leaflet-tile-pane { filter: invert(100%) hue-rotate(180deg) brightness(85%) contrast(90%); }
     body.dark-theme .dev-text { color: #cbd5e1 !important; }
     
@@ -50,6 +48,7 @@
     body.dark-theme .autocomplete-dropdown li { border-bottom-color: #334155; color: white; }
     body.dark-theme .autocomplete-dropdown li:hover { background: #334155; }
     body.dark-theme .ac-title { color: white; }
+    body.dark-theme .fab-main { background: #0f172a; }
 
     #splash-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; transition: opacity 0.5s ease; }
     #splash-screen h1 { font-size: 32px; font-weight: 900; color: #38bdf8; margin-bottom: 10px; }
@@ -71,7 +70,19 @@
     .btn-settings { padding: 5px; border-radius: 6px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex-shrink: 0; }
 
     #statusBadge { position: absolute; bottom: 20px; left: 15px; z-index: 1100; background: rgba(15, 23, 42, 0.9); border: 1px solid #38bdf8; color: #38bdf8; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; display: none; }
-    .btn-location { position: absolute; right: 15px; z-index: 1100; width: 46px; height: 46px; border-radius: 50%; font-size: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); bottom: 25px; }
+
+    /* [1번 기능 반영] 방사형(Radial) FAB 애니메이션 스타일 */
+    .fab-container { position: absolute; right: 15px; bottom: 25px; z-index: 1100; width: 46px; height: 46px; }
+    .fab-main { width: 100%; height: 100%; border-radius: 50%; font-size: 22px; background: #ffffff; border: 2px solid #38bdf8; color: #38bdf8; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); position: relative; z-index: 10; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; justify-content: center; }
+    .fab-container.open .fab-main { transform: scale(0.9); }
+    .fab-sub { position: absolute; top: 3px; left: 3px; width: 40px; height: 40px; border-radius: 50%; border: none; color: white; font-size: 11px; font-weight: bold; cursor: pointer; opacity: 0; transform: scale(0); transition: all 0.35s cubic-bezier(0.68, -0.55, 0.265, 1.55); z-index: 5; box-shadow: 0 3px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; }
+    .fab-center { background: #475569; font-size: 16px; }
+    .fab-start { background: #2563eb; }
+    .fab-end { background: #059669; }
+    .fab-container.open .fab-center { transform: translate(0px, -55px) scale(1); opacity: 1; }
+    .fab-container.open .fab-start { transform: translate(-45px, -35px) scale(1); opacity: 1; }
+    .fab-container.open .fab-end { transform: translate(-55px, 10px) scale(1); opacity: 1; }
+
     #toggleGasBtn { display: none; position: absolute; right: 15px; z-index: 1100; width: 46px; height: 46px; border-radius: 50%; font-size: 20px; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); bottom: 85px; background: #ea580c; border: 2px solid white; color: white; }
 
     #routeSelectorBar { display: none; position: absolute; top: 66px; left: 12px; z-index: 1000; background: rgba(255, 255, 255, 0.96); backdrop-filter: blur(8px); padding: 8px; border-radius: 14px; border: 1px solid #38bdf8; box-shadow: 0 6px 18px rgba(0,0,0,0.18); flex-direction: column; gap: 6px; width: 175px; }
@@ -106,7 +117,6 @@
     body.dark-theme .fact-card { background: #1e293b; border-color: #334155; }
     body.dark-theme .fact-card h4 { color: #f8fafc; }
 
-    /* [3번 문제 해결] 설정 모달 내부 길이 자동 조절 CSS 수정 */
     .fact-card h4 { font-size: 14px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
     .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 13px; font-weight: 600; gap: 10px; }
     .setting-row > span { flex-shrink: 0; }
@@ -182,25 +192,17 @@
 
   <div id="statusBadge">준비 중...</div>
   
-  <!-- [2번 문제 해결] 현위치 버튼을 오버레이 호출로 변경 -->
-  <button class="btn-location" onclick="document.getElementById('locationActionOverlay').classList.add('active')" title="내 위치 설정">🎯</button>
+  <!-- [1번 기능 개선] 방사형 애니메이션 FAB 버튼 (기존 팝업 대체) -->
+  <div id="fab-container" class="fab-container">
+    <button class="fab-main" onclick="toggleFab()" title="내 위치 메뉴">🎯</button>
+    <button class="fab-sub fab-center" onclick="goToCurrentLocation(); toggleFab();" title="지도 중앙 이동">📍</button>
+    <button class="fab-sub fab-start" onclick="setCurrentLocationAs('start'); toggleFab();" title="현위치를 출발지로">출발</button>
+    <button class="fab-sub fab-end" onclick="setCurrentLocationAs('end'); toggleFab();" title="현위치를 도착지로">도착</button>
+  </div>
   
   <div id="toggleGasBtn" onclick="toggleGasStations()" title="주유소 숨기기">⛽</div>
   <div id="routeSelectorBar"></div>
   <div id="map"></div>
-
-  <!-- [2번 문제 해결] 현위치 선택 모달 추가 -->
-  <div id="locationActionOverlay" class="overlay">
-    <div class="place-select-box" style="padding: 20px; text-align: center; max-width: 320px;">
-      <h3 style="margin-bottom: 15px; font-size: 16px; color: #1e293b;">내 위치 설정</h3>
-      <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 10px;">
-        <button class="btn-search" style="flex-grow: 1; padding: 10px;" onclick="setCurrentLocationAs('start')">출발지로</button>
-        <button class="btn-search" style="flex-grow: 1; padding: 10px; background: #059669;" onclick="setCurrentLocationAs('end')">목적지로</button>
-      </div>
-      <button class="btn-search" style="width: 100%; padding: 10px; background: #475569;" onclick="goToCurrentLocation()">지도 중앙 이동 (기존 기능)</button>
-      <button onclick="document.getElementById('locationActionOverlay').classList.remove('active')" style="margin-top: 15px; border: none; background: transparent; color: #64748b; font-weight: bold; cursor: pointer; padding: 5px;">취소</button>
-    </div>
-  </div>
 
   <!-- 집 주소 출발/도착 선택 팝업 -->
   <div id="homeActionOverlay" class="overlay">
@@ -233,7 +235,6 @@
               <option value="EV">전기차 충전소 우선</option>
             </select>
           </div>
-          <!-- [3번 문제 해결] 입력칸을 동적으로 축소 정렬 -->
           <div class="setting-row">
             <span>🏠 내 집 주소 저장</span>
             <div class="input-wrapper">
@@ -384,14 +385,13 @@
     let arrowOffset = 0;
     let isGasVisible = true;
     let currentArrowLayer = null;
-    let activePolyline = null; // 활성화된 경로 기억용
+    let activePolyline = null;
 
     const defaultImg = 'https://images.unsplash.com/photo-1541832676-9b763b0239ab?auto=format&fit=crop&w=150&q=80';
     const statusBadge = document.getElementById('statusBadge');
 
     fetch('rest_areas_master.json?v=' + Date.now(), { cache: 'no-store' }).then(res => res.json()).then(data => { allRestAreas = data; initUserLocation(); }).catch(e => {});
 
-    // [4번 문제 해결] 줌 시작 시 화살표 렌더링을 지워 떨림 현상 완벽 방지, 줌 종료 시 새로 부드럽게 다시 그림
     map.on('zoomstart', () => { 
       if (animTimerId) clearInterval(animTimerId); 
       arrowLayersGroup.clearLayers(); 
@@ -410,10 +410,16 @@
       }
     });
 
+    // 지도 터치 시 FAB 메뉴 닫기
+    map.on('click', () => { document.getElementById('fab-container').classList.remove('open'); });
+
     window.addEventListener('load', function() {
       setTimeout(function() { const splash = document.getElementById('splash-screen'); if (splash) { splash.style.opacity = '0'; setTimeout(() => { splash.style.display = 'none'; }, 500); } }, 2000);
       loadSettings(); setInterval(checkAutoTheme, 60000); 
     });
+
+    // FAB 메뉴 토글 함수
+    function toggleFab() { document.getElementById('fab-container').classList.toggle('open'); }
 
     function openSettings() { document.getElementById('settingsOverlay').classList.add('active'); }
     function closeSettings() { document.getElementById('settingsOverlay').classList.remove('active'); }
@@ -462,39 +468,23 @@
       alert('최신 버전으로 업데이트합니다.'); window.location.href = window.location.pathname + '?v=' + new Date().getTime();
     }
     
-    // [1번 문제 해결] 집 주소 버튼 선택 시 좌표 자동 변환 후 확정시킴
     async function setHomeAs(type) {
       document.getElementById('homeActionOverlay').classList.remove('active');
       const homeAddr = localStorage.getItem('pref_home');
       if (!homeAddr) return alert('설정에서 내 집 주소를 먼저 저장해주세요.');
-      
-      statusBadge.textContent = '집 주소 좌표 변환 중...';
-      statusBadge.style.display = 'block';
+      statusBadge.textContent = '집 주소 좌표 변환 중...'; statusBadge.style.display = 'block';
       const results = await searchPlaces(homeAddr);
       statusBadge.style.display = 'none';
-      
       if (results.length === 0) return alert("집 주소의 정확한 위치를 찾을 수 없습니다. 설정에서 주소를 정확히 입력해주세요.");
-      
-      if (type === 'start') {
-        searchStartCoord = results[0]; document.getElementById('startInput').value = homeAddr; lastConfirmedStartText = homeAddr;
-      } else {
-        searchEndCoord = results[0]; document.getElementById('endInput').value = homeAddr; lastConfirmedEndText = homeAddr;
-      }
+      if (type === 'start') { searchStartCoord = results[0]; document.getElementById('startInput').value = homeAddr; lastConfirmedStartText = homeAddr; } 
+      else { searchEndCoord = results[0]; document.getElementById('endInput').value = homeAddr; lastConfirmedEndText = homeAddr; }
     }
 
-    // [2번 문제 해결] 현위치 버튼을 출발/목적지로 자유롭게 선택 가능하도록 로직 변경
     function setCurrentLocationAs(type) {
-      document.getElementById('locationActionOverlay').classList.remove('active');
       if (!currentUserLatLng) return alert("현재 위치를 아직 파악하지 못했습니다. 잠시 후 다시 시도해주세요.");
-      
-      const locName = "현위치";
-      const coord = { name: locName, lat: currentUserLatLng[0], lng: currentUserLatLng[1] };
-      
-      if (type === 'start') {
-        searchStartCoord = coord; document.getElementById('startInput').value = locName; lastConfirmedStartText = locName;
-      } else {
-        searchEndCoord = coord; document.getElementById('endInput').value = locName; lastConfirmedEndText = locName;
-      }
+      const locName = "현위치"; const coord = { name: locName, lat: currentUserLatLng[0], lng: currentUserLatLng[1] };
+      if (type === 'start') { searchStartCoord = coord; document.getElementById('startInput').value = locName; lastConfirmedStartText = locName; } 
+      else { searchEndCoord = coord; document.getElementById('endInput').value = locName; lastConfirmedEndText = locName; }
     }
 
     function initUserLocation() {
@@ -515,10 +505,7 @@
       L.circle(latLng, { radius: Math.min(accuracy, 200), color: '#38bdf8', weight: 1, fillColor: '#38bdf8', fillOpacity: 0.15 }).addTo(userLocationLayer);
     }
     
-    function goToCurrentLocation() { 
-      document.getElementById('locationActionOverlay').classList.remove('active');
-      if (currentUserLatLng) { map.setView(currentUserLatLng, 15); } else { initUserLocation(); }
-    }
+    function goToCurrentLocation() { if (currentUserLatLng) { map.setView(currentUserLatLng, 15); } else { initUserLocation(); } }
 
     let startTimeout, endTimeout, homeTimeout;
     const startInput = document.getElementById('startInput'); const endInput = document.getElementById('endInput'); const homeInput = document.getElementById('homeInput');
@@ -679,21 +666,28 @@
           searchEndCoord = chosenEnd; document.getElementById('endInput').value = searchEndCoord.name; lastConfirmedEndText = searchEndCoord.name;
         }
 
+        // [2번 기능 개선] 경로 비교를 위한 4가지 우선순위 호출 (최단거리 추가)
         const urlRecommend = `https://apis-navi.kakaomobility.com/v1/directions?origin=${searchStartCoord.lng},${searchStartCoord.lat}&destination=${searchEndCoord.lng},${searchEndCoord.lat}&priority=RECOMMEND`;
         const urlTime = `https://apis-navi.kakaomobility.com/v1/directions?origin=${searchStartCoord.lng},${searchStartCoord.lat}&destination=${searchEndCoord.lng},${searchEndCoord.lat}&priority=TIME`;
+        const urlDist = `https://apis-navi.kakaomobility.com/v1/directions?origin=${searchStartCoord.lng},${searchStartCoord.lat}&destination=${searchEndCoord.lng},${searchEndCoord.lat}&priority=DISTANCE`;
         const urlFree = `https://apis-navi.kakaomobility.com/v1/directions?origin=${searchStartCoord.lng},${searchStartCoord.lat}&destination=${searchEndCoord.lng},${searchEndCoord.lat}&priority=RECOMMEND&avoid=toll`;
 
-        statusBadge.textContent = '경로 탐색 중...'; statusBadge.style.display = 'block';
+        statusBadge.textContent = '다중 경로 탐색 중...'; statusBadge.style.display = 'block';
 
-        const [resRec, resTime, resFree] = await Promise.all([
+        const [resRec, resTime, resDist, resFree] = await Promise.all([
           fetch(urlRecommend, { headers: { 'Authorization': `KakaoAK ${KAKAO_REST_API_KEY}` } }),
           fetch(urlTime, { headers: { 'Authorization': `KakaoAK ${KAKAO_REST_API_KEY}` } }),
+          fetch(urlDist, { headers: { 'Authorization': `KakaoAK ${KAKAO_REST_API_KEY}` } }),
           fetch(urlFree, { headers: { 'Authorization': `KakaoAK ${KAKAO_REST_API_KEY}` } })
         ]);
 
         if (resRec.status === 401 || resRec.status === 403) { alert('카카오 API 연동 에러입니다.'); btn.textContent = '탐색'; btn.disabled = false; return; }
 
-        const dataRec = resRec.ok ? await resRec.json() : null; const dataTime = resTime.ok ? await resTime.json() : null; const dataFree = resFree.ok ? await resFree.json() : null;
+        const dataRec = resRec.ok ? await resRec.json() : null; 
+        const dataTime = resTime.ok ? await resTime.json() : null; 
+        const dataDist = resDist.ok ? await resDist.json() : null; 
+        const dataFree = resFree.ok ? await resFree.json() : null;
+        
         statusBadge.style.display = 'none'; foundRoutes = [];
         
         function parseRoute(data, typeName) {
@@ -703,9 +697,19 @@
           return { type: typeName, duration: r.summary.duration, toll: r.summary.fare.toll, geometry: { coordinates: coords } };
         }
 
-        const route1 = parseRoute(dataRec, '추천경로'); if (route1) foundRoutes.push(route1);
-        const route2 = parseRoute(dataTime, '최단시간'); if (route2) foundRoutes.push(route2);
-        const route3 = parseRoute(dataFree, '무료도로'); if (route3) foundRoutes.push(route3);
+        const rRec = parseRoute(dataRec, '추천경로'); 
+        const rTime = parseRoute(dataTime, '최단시간'); 
+        const rDist = parseRoute(dataDist, '최단거리'); 
+        const rFree = parseRoute(dataFree, '무료도로');
+
+        // [2번 기능 개선] 중복 경로 필터링 로직
+        if (rRec) foundRoutes.push(rRec);
+        // 추천경로와 최단시간의 시간/요금이 완벽히 일치하면 똑같은 길로 간주하고 숨김
+        if (rTime && (!rRec || rTime.duration !== rRec.duration || rTime.toll !== rRec.toll)) foundRoutes.push(rTime);
+        // 최단거리가 기존에 담긴 다른 경로들과 겹치지 않으면 추가
+        if (rDist && !foundRoutes.some(r => r.duration === rDist.duration && r.toll === rDist.toll)) foundRoutes.push(rDist);
+        if (rFree && !foundRoutes.some(r => r.duration === rFree.duration && r.toll === rFree.toll)) foundRoutes.push(rFree);
+
         if (foundRoutes.length === 0) { alert('경로를 찾을 수 없습니다.'); btn.textContent = '탐색'; btn.disabled = false; return; }
 
         setupRouteSelectorBar(foundRoutes); selectActiveRoute(0);
@@ -798,7 +802,17 @@
           checkMap.add(st.id); drowsyFound = true;
           const customIcon = L.divIcon({ className: 'rest-unified-marker', html: `<div class="rest-tag" style="background:#fcd34d; color:#78350f; border-color:#d97706; font-size:10px;">💤 ${st.place_name}</div><div class="rest-dot" style="background:#fcd34d; border-color:#d97706;"></div>`, iconSize: [100, 36], iconAnchor: [50, 36] });
           const m = L.marker([st.y, st.x], { icon: customIcon }).addTo(markersLayer);
-          m.bindPopup(`<b style="font-size:14px;">${st.place_name}</b><br><span style="font-size:12px; color:#64748b;">휴식 전용 졸음쉼터</span>`);
+          
+          // [3번 기능 개선] 졸음쉼터 기본 팝업에 "화장실 구비" 뱃지 추가 (전기차 문구는 제외)
+          m.bindPopup(`
+            <div style="text-align:center; padding: 4px;">
+              <b style="font-size:14px; color:#1e293b;">${st.place_name}</b><br>
+              <span style="font-size:11px; color:#64748b;">휴식 전용 졸음쉼터</span><br>
+              <div style="margin-top:8px;">
+                <span style="background:#dbeafe; color:#1d4ed8; padding:3px 8px; border-radius:5px; font-size:11px; font-weight:800; border:1px solid #bfdbfe;">🚻 화장실 구비</span>
+              </div>
+            </div>
+          `);
         }
       });
       if (!drowsyFound) setTimeout(() => alert("해당 경로에는 졸음쉼터가 없습니다."), 500);
@@ -839,7 +853,7 @@
         const poly = L.polyline(latLngs, { color: isSelected ? '#1d4ed8' : '#94a3b8', weight: isSelected ? 6 : 4, opacity: isSelected ? 1 : 0.4, dashArray: isSelected ? null : '5, 5' }).addTo(routeLayersGroup);
 
         if (isSelected) {
-          activePolyline = poly; // 줌 이벤트 복구를 위해 활성 경로 저장
+          activePolyline = poly; 
           poly.bringToFront(); map.fitBounds(poly.getBounds(), { padding: [30, 30] });
           currentArrowLayer = L.polylineDecorator(poly, { patterns: [{ offset: 0, repeat: 100, symbol: L.Symbol.arrowHead({ pixelSize: 12, polygon: false, pathOptions: { stroke: true, weight: 3, color: '#ffffff', opacity: 1 } }) }] }).addTo(arrowLayersGroup);
           
@@ -876,7 +890,7 @@
     }
 
     function resetView() {
-      closeModal(); document.getElementById('routeSelectorBar').style.display = 'none'; document.getElementById('toggleGasBtn').style.display = 'none'; startDropdown.style.display = 'none'; endDropdown.style.display = 'none'; routeLayersGroup.clearLayers(); arrowLayersGroup.clearLayers(); markersLayer.clearLayers(); gasMarkersLayer.clearLayers(); if(animTimerId) clearInterval(animTimerId); document.getElementById('startInput').value = ''; document.getElementById('endInput').value = ''; searchStartCoord = null; searchEndCoord = null; lastConfirmedStartText = null; lastConfirmedEndText = null; foundRoutes = []; activePolyline = null; if (currentUserLatLng) map.setView(currentUserLatLng, 15); else map.setView([36.5, 127.8], 8);
+      closeModal(); document.getElementById('routeSelectorBar').style.display = 'none'; document.getElementById('toggleGasBtn').style.display = 'none'; startDropdown.style.display = 'none'; endDropdown.style.display = 'none'; document.getElementById('fab-container').classList.remove('open'); routeLayersGroup.clearLayers(); arrowLayersGroup.clearLayers(); markersLayer.clearLayers(); gasMarkersLayer.clearLayers(); if(animTimerId) clearInterval(animTimerId); document.getElementById('startInput').value = ''; document.getElementById('endInput').value = ''; searchStartCoord = null; searchEndCoord = null; lastConfirmedStartText = null; lastConfirmedEndText = null; foundRoutes = []; activePolyline = null; if (currentUserLatLng) map.setView(currentUserLatLng, 15); else map.setView([36.5, 127.8], 8);
     }
   </script>
   
