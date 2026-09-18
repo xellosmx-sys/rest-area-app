@@ -24,7 +24,7 @@
     .rest-tag { background: #ffffff; color: #2563eb; border: 1px solid #2563eb; }
     .btn-location { background: #ffffff; border: 2px solid #38bdf8; color: #38bdf8; }
 
-    /* --- [다크 모드 완벽 적용 (눈부심 방지)] --- */
+    /* 다크 모드 완벽 적용 */
     body.dark-theme { background: #0f172a; color: white; }
     body.dark-theme #splash-screen { background-color: #0f172a; color: white; }
     body.dark-theme #splash-screen p { color: #94a3b8; }
@@ -37,7 +37,6 @@
     body.dark-theme .leaflet-tile-pane { filter: invert(100%) hue-rotate(180deg) brightness(85%) contrast(90%); }
     body.dark-theme .dev-text { color: #cbd5e1 !important; }
     
-    /* 모달 및 배경 다크모드 덮어쓰기 */
     body.dark-theme .modal-content { background: #0f172a; color: white; }
     body.dark-theme .place-select-box { background: #0f172a; color: white; border: 1px solid #334155; }
     body.dark-theme .place-select-box h3 { color: white !important; }
@@ -73,10 +72,8 @@
 
     #statusBadge { position: absolute; bottom: 20px; left: 15px; z-index: 1100; background: rgba(15, 23, 42, 0.9); border: 1px solid #38bdf8; color: #38bdf8; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; display: none; }
     .btn-location { position: absolute; right: 15px; z-index: 1100; width: 46px; height: 46px; border-radius: 50%; font-size: 22px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); bottom: 25px; }
-
     #toggleGasBtn { display: none; position: absolute; right: 15px; z-index: 1100; width: 46px; height: 46px; border-radius: 50%; font-size: 20px; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); bottom: 85px; background: #ea580c; border: 2px solid white; color: white; }
 
-    /* 경로 선택 바 세로(Column) 배치 스타일 */
     #routeSelectorBar { display: none; position: absolute; top: 66px; left: 12px; z-index: 1000; background: rgba(255, 255, 255, 0.96); backdrop-filter: blur(8px); padding: 8px; border-radius: 14px; border: 1px solid #38bdf8; box-shadow: 0 6px 18px rgba(0,0,0,0.18); flex-direction: column; gap: 6px; width: 175px; }
     body.dark-theme #routeSelectorBar { background: rgba(15, 23, 42, 0.94); }
     .route-tab-btn { width: 100%; padding: 8px 10px; border-radius: 10px; border: 1px solid #e2e8f0; font-size: 12px; font-weight: 800; background: #f8fafc; color: #475569; cursor: pointer; text-align: left; line-height: 1.35; transition: all 0.2s; }
@@ -109,8 +106,12 @@
     body.dark-theme .fact-card { background: #1e293b; border-color: #334155; }
     body.dark-theme .fact-card h4 { color: #f8fafc; }
 
-    .fact-card h4 { font-size: 14px; color: #1e293b; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
-    .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 13px; font-weight: 600; }
+    /* [3번 문제 해결] 설정 모달 내부 길이 자동 조절 CSS 수정 */
+    .fact-card h4 { font-size: 14px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+    .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 13px; font-weight: 600; gap: 10px; }
+    .setting-row > span { flex-shrink: 0; }
+    .setting-row .input-wrapper, .setting-row input, .setting-row select { flex-grow: 1; min-width: 0; text-align: right; }
+    .setting-row .input-wrapper .input-box { width: 100%; text-align: right; }
     body.dark-theme .setting-row { color: #e2e8f0; }
     body.light-theme .setting-row { color: #334155; }
     .setting-row select, .setting-row input[type="text"], .setting-row input[type="time"] { padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px; outline: none; background: white; color: #1e293b;}
@@ -174,17 +175,34 @@
       </div>
       <button class="btn-search" onclick="handleSearchRoute()">탐색</button>
       
-      <button class="btn-settings" onclick="promptHomeAction()" title="내 집 주소 불러오기">🏠</button>
+      <button class="btn-settings" onclick="document.getElementById('homeActionOverlay').classList.add('active')" title="내 집 주소 불러오기">🏠</button>
       <button class="btn-settings" onclick="openSettings()" title="앱 설정">⚙️</button>
     </div>
   </div>
 
   <div id="statusBadge">준비 중...</div>
-  <button class="btn-location" onclick="goToCurrentLocation()" title="내 위치로 이동">🎯</button>
+  
+  <!-- [2번 문제 해결] 현위치 버튼을 오버레이 호출로 변경 -->
+  <button class="btn-location" onclick="document.getElementById('locationActionOverlay').classList.add('active')" title="내 위치 설정">🎯</button>
+  
   <div id="toggleGasBtn" onclick="toggleGasStations()" title="주유소 숨기기">⛽</div>
   <div id="routeSelectorBar"></div>
   <div id="map"></div>
 
+  <!-- [2번 문제 해결] 현위치 선택 모달 추가 -->
+  <div id="locationActionOverlay" class="overlay">
+    <div class="place-select-box" style="padding: 20px; text-align: center; max-width: 320px;">
+      <h3 style="margin-bottom: 15px; font-size: 16px; color: #1e293b;">내 위치 설정</h3>
+      <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 10px;">
+        <button class="btn-search" style="flex-grow: 1; padding: 10px;" onclick="setCurrentLocationAs('start')">출발지로</button>
+        <button class="btn-search" style="flex-grow: 1; padding: 10px; background: #059669;" onclick="setCurrentLocationAs('end')">목적지로</button>
+      </div>
+      <button class="btn-search" style="width: 100%; padding: 10px; background: #475569;" onclick="goToCurrentLocation()">지도 중앙 이동 (기존 기능)</button>
+      <button onclick="document.getElementById('locationActionOverlay').classList.remove('active')" style="margin-top: 15px; border: none; background: transparent; color: #64748b; font-weight: bold; cursor: pointer; padding: 5px;">취소</button>
+    </div>
+  </div>
+
+  <!-- 집 주소 출발/도착 선택 팝업 -->
   <div id="homeActionOverlay" class="overlay">
     <div class="place-select-box" style="padding: 20px; text-align: center; max-width: 320px;">
       <h3 style="margin-bottom: 15px; font-size: 16px; color: #1e293b;">내 집 주소 설정</h3>
@@ -208,24 +226,24 @@
           <h4>🚙 맞춤 정보 및 목적지</h4>
           <div class="setting-row">
             <span>내 차 연료 필터</span>
-            <select id="fuelSelect" style="width: 140px;">
+            <select id="fuelSelect">
               <option value="ALL">모두 보기 (기본)</option>
               <option value="GAS">주유소(휘발유/경유) 우선</option>
               <option value="LPG">LPG 충전소 우선</option>
               <option value="EV">전기차 충전소 우선</option>
             </select>
           </div>
-          <!-- 집 주소 입력 칸 길이 및 디자인 개선 -->
+          <!-- [3번 문제 해결] 입력칸을 동적으로 축소 정렬 -->
           <div class="setting-row">
             <span>🏠 내 집 주소 저장</span>
-            <div class="input-wrapper" style="width: 140px; position: relative;">
-              <input type="text" id="homeInput" class="input-box" placeholder="동/도로명 입력" autocomplete="off" style="text-align: left;" />
+            <div class="input-wrapper">
+              <input type="text" id="homeInput" class="input-box" placeholder="동/도로명 입력" autocomplete="off" />
               <ul id="homeDropdown" class="autocomplete-dropdown" style="width: 100%; right: 0; left: auto; max-height: 150px;"></ul>
             </div>
           </div>
           <div class="setting-row" style="margin-bottom: 0;">
             <span>🍜 선호 음식(메뉴) 강조</span>
-            <input type="text" id="foodInput" class="input-box" placeholder="예: 우동" style="width: 140px; text-align: left;" />
+            <input type="text" id="foodInput" class="input-box" placeholder="예: 우동" />
           </div>
           <div class="setting-row" style="justify-content: flex-end; margin-top: 10px; margin-bottom: 0;">
             <button class="btn-search" style="background:#2563eb;" onclick="saveSettingsBtn()">💾 설정 저장</button>
@@ -236,7 +254,7 @@
           <h4>📱 테마 화면 설정</h4>
           <div class="setting-row">
             <span>다크 모드 강제/자동 선택</span>
-            <select id="darkConfig" onchange="applyThemeAndSave()" style="width: 140px;">
+            <select id="darkConfig" onchange="applyThemeAndSave()">
               <option value="LIGHT">항상 밝게</option>
               <option value="DARK">항상 어둡게</option>
               <option value="AUTO">시간대 자동 (야간주행용)</option>
@@ -345,9 +363,7 @@
 
   <script>
     proj4.defs("KATEC", "+proj=tmerc +lat_0=38 +lon_0=128 +k=0.9999 +x_0=400000 +y_0=600000 +ellps=bessel +towgs84=-115.80,474.99,674.11,1.16,-2.31,-1.63,6.43 +units=m +no_defs");
-
     const EV_RATES = { "기후에너지환경부": "약 347.2원/kWh", "한국전력": "약 347.2원/kWh", "현대엔지니어링": "약 347.2원/kWh", "에버온": "약 330원/kWh", "채비(CHAEVI)": "약 340원/kWh" };
-
     const KAKAO_REST_API_KEY = '9ab57e47f2e219d0972329862be77d25';
     const OPINET_API_KEY = 'F260915130'; 
     const map = L.map('map', { zoomControl: false }).setView([36.5, 127.8], 8);
@@ -368,16 +384,22 @@
     let arrowOffset = 0;
     let isGasVisible = true;
     let currentArrowLayer = null;
+    let activePolyline = null; // 활성화된 경로 기억용
 
     const defaultImg = 'https://images.unsplash.com/photo-1541832676-9b763b0239ab?auto=format&fit=crop&w=150&q=80';
     const statusBadge = document.getElementById('statusBadge');
 
     fetch('rest_areas_master.json?v=' + Date.now(), { cache: 'no-store' }).then(res => res.json()).then(data => { allRestAreas = data; initUserLocation(); }).catch(e => {});
 
-    // 지도 줌(확대/축소) 시 화살표 떨림 완전 방지 로직
-    map.on('zoomstart', () => { if (animTimerId) clearInterval(animTimerId); });
+    // [4번 문제 해결] 줌 시작 시 화살표 렌더링을 지워 떨림 현상 완벽 방지, 줌 종료 시 새로 부드럽게 다시 그림
+    map.on('zoomstart', () => { 
+      if (animTimerId) clearInterval(animTimerId); 
+      arrowLayersGroup.clearLayers(); 
+    });
     map.on('zoomend', () => {
-      if (currentArrowLayer && foundRoutes.length > 0) {
+      if (activePolyline && foundRoutes.length > 0) {
+        arrowLayersGroup.clearLayers();
+        currentArrowLayer = L.polylineDecorator(activePolyline, { patterns: [{ offset: 0, repeat: 100, symbol: L.Symbol.arrowHead({ pixelSize: 12, polygon: false, pathOptions: { stroke: true, weight: 3, color: '#ffffff', opacity: 1 } }) }] }).addTo(arrowLayersGroup);
         animTimerId = setInterval(() => {
           arrowOffset = (arrowOffset + 2) % 100;
           if(currentArrowLayer && currentArrowLayer.options) {
@@ -440,17 +462,39 @@
       alert('최신 버전으로 업데이트합니다.'); window.location.href = window.location.pathname + '?v=' + new Date().getTime();
     }
     
-    function promptHomeAction() {
-      const homeAddr = localStorage.getItem('pref_home');
-      if (!homeAddr) return alert('설정에서 내 집 주소를 먼저 저장해주세요.');
-      document.getElementById('homeActionOverlay').classList.add('active');
-    }
-
-    function setHomeAs(type) {
+    // [1번 문제 해결] 집 주소 버튼 선택 시 좌표 자동 변환 후 확정시킴
+    async function setHomeAs(type) {
       document.getElementById('homeActionOverlay').classList.remove('active');
       const homeAddr = localStorage.getItem('pref_home');
-      if (type === 'start') { document.getElementById('startInput').value = homeAddr; searchStartCoord = null; lastConfirmedStartText = null; } 
-      else { document.getElementById('endInput').value = homeAddr; searchEndCoord = null; lastConfirmedEndText = null; }
+      if (!homeAddr) return alert('설정에서 내 집 주소를 먼저 저장해주세요.');
+      
+      statusBadge.textContent = '집 주소 좌표 변환 중...';
+      statusBadge.style.display = 'block';
+      const results = await searchPlaces(homeAddr);
+      statusBadge.style.display = 'none';
+      
+      if (results.length === 0) return alert("집 주소의 정확한 위치를 찾을 수 없습니다. 설정에서 주소를 정확히 입력해주세요.");
+      
+      if (type === 'start') {
+        searchStartCoord = results[0]; document.getElementById('startInput').value = homeAddr; lastConfirmedStartText = homeAddr;
+      } else {
+        searchEndCoord = results[0]; document.getElementById('endInput').value = homeAddr; lastConfirmedEndText = homeAddr;
+      }
+    }
+
+    // [2번 문제 해결] 현위치 버튼을 출발/목적지로 자유롭게 선택 가능하도록 로직 변경
+    function setCurrentLocationAs(type) {
+      document.getElementById('locationActionOverlay').classList.remove('active');
+      if (!currentUserLatLng) return alert("현재 위치를 아직 파악하지 못했습니다. 잠시 후 다시 시도해주세요.");
+      
+      const locName = "현위치";
+      const coord = { name: locName, lat: currentUserLatLng[0], lng: currentUserLatLng[1] };
+      
+      if (type === 'start') {
+        searchStartCoord = coord; document.getElementById('startInput').value = locName; lastConfirmedStartText = locName;
+      } else {
+        searchEndCoord = coord; document.getElementById('endInput').value = locName; lastConfirmedEndText = locName;
+      }
     }
 
     function initUserLocation() {
@@ -470,7 +514,11 @@
       L.circleMarker(latLng, { radius: 8, fillColor: '#2563eb', color: '#ffffff', weight: 3, opacity: 1, fillOpacity: 1 }).addTo(userLocationLayer).bindTooltip("내 위치", { permanent: true, direction: "bottom", offset: [0, 6] });
       L.circle(latLng, { radius: Math.min(accuracy, 200), color: '#38bdf8', weight: 1, fillColor: '#38bdf8', fillOpacity: 0.15 }).addTo(userLocationLayer);
     }
-    function goToCurrentLocation() { if (currentUserLatLng) { map.setView(currentUserLatLng, 15); } initUserLocation(); }
+    
+    function goToCurrentLocation() { 
+      document.getElementById('locationActionOverlay').classList.remove('active');
+      if (currentUserLatLng) { map.setView(currentUserLatLng, 15); } else { initUserLocation(); }
+    }
 
     let startTimeout, endTimeout, homeTimeout;
     const startInput = document.getElementById('startInput'); const endInput = document.getElementById('endInput'); const homeInput = document.getElementById('homeInput');
@@ -607,9 +655,6 @@
       return samplePoints;
     }
 
-    let searchStartCoord = null; let searchEndCoord = null;
-    let lastConfirmedStartText = null; let lastConfirmedEndText = null;
-
     async function handleSearchRoute() {
       const startText = document.getElementById('startInput').value.trim(); const endText = document.getElementById('endInput'); const textEnd = endText.value.trim();
       if (!startText || !textEnd) return alert('출발지와 목적지를 모두 입력해 주세요.');
@@ -619,14 +664,11 @@
 
       try {
         if (!(searchStartCoord && lastConfirmedStartText === startText)) {
-          if (startText === '현위치' && currentUserLatLng) { searchStartCoord = { name: '현위치', lat: currentUserLatLng[0], lng: currentUserLatLng[1] }; lastConfirmedStartText = '현위치'; } 
-          else {
-            const startResults = await searchPlaces(startText);
-            if (startResults.length === 0) { alert(`출발지 '${startText}' 위치를 찾지 못했습니다.`); btn.textContent = '탐색'; btn.disabled = false; return; }
-            if(startResults.length === 1) { searchStartCoord = startResults[0]; } 
-            else { const chosenStart = await promptPlaceSelection(`출발지 선택: ${startText}`, startResults); if (!chosenStart) { btn.textContent = '탐색'; btn.disabled = false; return; } searchStartCoord = chosenStart; }
-            document.getElementById('startInput').value = searchStartCoord.name; lastConfirmedStartText = searchStartCoord.name;
-          }
+          const startResults = await searchPlaces(startText);
+          if (startResults.length === 0) { alert(`출발지 '${startText}' 위치를 찾지 못했습니다.`); btn.textContent = '탐색'; btn.disabled = false; return; }
+          if(startResults.length === 1) { searchStartCoord = startResults[0]; } 
+          else { const chosenStart = await promptPlaceSelection(`출발지 선택: ${startText}`, startResults); if (!chosenStart) { btn.textContent = '탐색'; btn.disabled = false; return; } searchStartCoord = chosenStart; }
+          document.getElementById('startInput').value = searchStartCoord.name; lastConfirmedStartText = searchStartCoord.name;
           await new Promise(r => setTimeout(r, 200));
         }
 
@@ -693,7 +735,6 @@
       else { map.removeLayer(gasMarkersLayer); document.getElementById('toggleGasBtn').style.background = '#64748b'; document.getElementById('toggleGasBtn').style.opacity = '0.5'; }
     }
 
-    // 카카오 로컬 API 기반 안정적 주유소 탐색
     async function searchAndRenderGasStations(latLngs) {
       gasMarkersLayer.clearLayers(); const checkMap = new Set();
       const samplePoints = getSamplePoints(latLngs, 15);
@@ -715,7 +756,6 @@
       statusBadge.style.display = 'none'; document.getElementById('toggleGasBtn').style.display = 'flex';
     }
 
-    // 주유소 클릭 시 1회 실시간 가격 호출 (오피넷 연동)
     async function openDynamicGasModal(st) {
       document.getElementById('mTitle').textContent = st.place_name; document.getElementById('mRoute').textContent = st.road_address_name || st.address_name;
       document.getElementById('mBadge').style.display = 'none'; document.getElementById('foodCardDiv').style.display = 'block'; document.getElementById('menuCardDiv').style.display = 'none'; document.getElementById('parkCardDiv').style.display = 'none';
@@ -745,7 +785,6 @@
       } catch(e) { gasVal.textContent = '통신 지연'; }
     }
 
-    // 카카오 로컬 API 활용 졸음쉼터 실시간 탐색
     async function searchAndRenderDrowsyAreas(latLngs) {
       const checkMap = new Set(); const samplePoints = getSamplePoints(latLngs, 20);
       const fetchPromises = samplePoints.map(async (pt) => {
@@ -794,10 +833,13 @@
       foundRoutes.forEach((route, idx) => {
         const latLngs = route.geometry.coordinates; 
         const isSelected = (idx === targetIdx);
-        if (isSelected) L.polyline(latLngs, { color: '#60a5fa', weight: 16, opacity: 0.35, lineJoin: 'round' }).addTo(routeLayersGroup);
+        if (isSelected) {
+          activePolyline = L.polyline(latLngs, { color: '#60a5fa', weight: 16, opacity: 0.35, lineJoin: 'round' }).addTo(routeLayersGroup);
+        }
         const poly = L.polyline(latLngs, { color: isSelected ? '#1d4ed8' : '#94a3b8', weight: isSelected ? 6 : 4, opacity: isSelected ? 1 : 0.4, dashArray: isSelected ? null : '5, 5' }).addTo(routeLayersGroup);
 
         if (isSelected) {
+          activePolyline = poly; // 줌 이벤트 복구를 위해 활성 경로 저장
           poly.bringToFront(); map.fitBounds(poly.getBounds(), { padding: [30, 30] });
           currentArrowLayer = L.polylineDecorator(poly, { patterns: [{ offset: 0, repeat: 100, symbol: L.Symbol.arrowHead({ pixelSize: 12, polygon: false, pathOptions: { stroke: true, weight: 3, color: '#ffffff', opacity: 1 } }) }] }).addTo(arrowLayersGroup);
           
@@ -834,7 +876,7 @@
     }
 
     function resetView() {
-      closeModal(); document.getElementById('routeSelectorBar').style.display = 'none'; document.getElementById('toggleGasBtn').style.display = 'none'; startDropdown.style.display = 'none'; endDropdown.style.display = 'none'; routeLayersGroup.clearLayers(); arrowLayersGroup.clearLayers(); markersLayer.clearLayers(); gasMarkersLayer.clearLayers(); if(animTimerId) clearInterval(animTimerId); document.getElementById('startInput').value = ''; document.getElementById('endInput').value = ''; searchStartCoord = null; searchEndCoord = null; lastConfirmedStartText = null; lastConfirmedEndText = null; foundRoutes = []; if (currentUserLatLng) map.setView(currentUserLatLng, 15); else map.setView([36.5, 127.8], 8);
+      closeModal(); document.getElementById('routeSelectorBar').style.display = 'none'; document.getElementById('toggleGasBtn').style.display = 'none'; startDropdown.style.display = 'none'; endDropdown.style.display = 'none'; routeLayersGroup.clearLayers(); arrowLayersGroup.clearLayers(); markersLayer.clearLayers(); gasMarkersLayer.clearLayers(); if(animTimerId) clearInterval(animTimerId); document.getElementById('startInput').value = ''; document.getElementById('endInput').value = ''; searchStartCoord = null; searchEndCoord = null; lastConfirmedStartText = null; lastConfirmedEndText = null; foundRoutes = []; activePolyline = null; if (currentUserLatLng) map.setView(currentUserLatLng, 15); else map.setView([36.5, 127.8], 8);
     }
   </script>
   
