@@ -1,22 +1,49 @@
-const CACHE_NAME = 'rest-app-v1';
+// 쉬어갈카 서비스워커 — 버전을 올리면 옛 캐시를 지운다.
+const CACHE = 'shigeo-v3';
+const SHELL = ['./', './index.html', './manifest.json', './rest_areas_master.json'];
+const CDN = ['unpkg.com', 'cdnjs.cloudflare.com', 'cdn.jsdelivr.net'];
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();
-  e.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(['./index.html']))
-  );
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).catch(() => {}));
 });
 
 self.addEventListener('activate', (e) => {
-  e.waitUntil(self.clients.claim());
+  e.waitUntil(
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
+  );
 });
 
 self.addEventListener('fetch', (e) => {
-  // 화면(navigate) 요청만 서비스 워커가 관여하고,
-  // 카카오/OSRM/Nominatim/휴게소 데이터 등 나머지 요청은 그대로 브라우저에 맡김
-  if (e.request.mode === 'navigate') {
-    e.respondWith(
-      fetch(e.request).catch(() => caches.match('./index.html'))
-    );
+  const req = e.request;
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+
+  // 화면: 네트워크 먼저, 끊기면 저장본
+  if (req.mode === 'navigate') {
+    e.respondWith(fetch(req).catch(() => caches.match('./index.html')));
+    return;
   }
+  // 휴게소 데이터: 저장본을 먼저 보여 주고 뒤에서 갱신
+  if (url.origin === location.origin && url.pathname.endsWith('.json')) {
+    e.respondWith(caches.open(CACHE).then(async (c) => {
+      const hit = await c.match(req, { ignoreSearch: true });
+      const net = fetch(req).then((res) => { if (res.ok) c.put(req, res.clone()); return res; }).catch(() => hit);
+      return hit || net;
+    }));
+    return;
+  }
+  // 라이브러리·글꼴(CDN): 버전 고정 주소라 저장본 우선
+  if (CDN.includes(url.hostname)) {
+    e.respondWith(caches.open(CACHE).then(async (c) => {
+      const hit = await c.match(req);
+      if (hit) return hit;
+      const res = await fetch(req);
+      if (res.ok || res.type === 'opaque') c.put(req, res.clone());
+      return res;
+    }));
+  }
+  // 카카오·오피넷·지도 타일 등 나머지는 브라우저에 맡긴다
 });
