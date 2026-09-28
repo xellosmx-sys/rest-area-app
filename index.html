@@ -1,907 +1,1505 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" data-theme="light">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>고속도로 휴게소 가이드</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>쉬어갈카 — 고속도로 휴게소 가이드</title>
+  <meta name="description" content="경로 위 내 진행 방향 휴게소만 골라 보여 주는 고속도로 휴게소 가이드" />
+  <meta name="theme-color" content="#F3EFE4" />
 
-  <!-- 파비콘 및 모바일 앱 아이콘 설정 -->
-  <link rel="icon" type="image/x-icon" href="./favicon.ico">
-  <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="./favicon-16x16.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
-  
-  <link rel="manifest" href="./manifest.json?v=2">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.min.js"></script>
+  <link rel="icon" type="image/x-icon" href="./favicon.ico" />
+  <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="./favicon-16x16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png" />
+  <link rel="manifest" href="./manifest.json" />
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" integrity="sha384-GIdEBaqGN9mNkDkMkzMHW8EKUqtpPIe/sLj1X7DIrnc9uPtLROJgmuDlh+3rBw0j" crossorigin="anonymous" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.js" integrity="sha384-FhPn/2P/fJGhQLeNWDn9B/2Gml2bPOrKJwFqJXgR3xOPYxWg5mYQ5XZdhUSugZT0" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.min.js" integrity="sha384-sj0T8LNfPM3GGoPwyfyPWLkfgcUNuvfMmqMxNrdnuiPT7OiEObjXAd1i4dRaZLQ+" crossorigin="anonymous"></script>
 
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Pretendard", Roboto, sans-serif; }
+    /* ── 토큰 ─────────────────────────────────────────── */
+    :root {
+      --font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+
+      --paper: #F3EFE4;       /* 지도책 종이 */
+      --paper-2: #E9E3D3;     /* 둘째 면: 탭·눌림 */
+      --paper-3: #FBF9F3;     /* 입력칸·시트 칸 */
+      --ink: #1F2A30;
+      --ink-2: #4A565C;
+      --ink-3: #5F686D;
+      --rule: #D3CAB6;
+      --rule-strong: #1F2A30;
+
+      --green: #0E7A55;       /* 고속도로·휴게소 */
+      --green-ink: #0A5C40;
+      --green-wash: #DCEBE2;
+      --orange: #C45A12;      /* 주유소·무료도로 (글자용) */
+      --orange-fill: #E2701F;
+      --ochre: #8A6400;       /* 졸음쉼터 */
+      --red: #B3342A;
+      --route-other: #8C8676;
+      --on-green: #FFFFFF;
+
+      --shadow-sheet: 0 -1px 0 rgba(31, 42, 48, .04), 0 -24px 48px -12px rgba(31, 42, 48, .22);
+      --shadow-pop: 0 1px 2px rgba(31, 42, 48, .06), 0 10px 28px -8px rgba(31, 42, 48, .20);
+      --shadow-lift: 0 1px 1px rgba(31, 42, 48, .05), 0 4px 12px -4px rgba(31, 42, 48, .14);
+      --hi: inset 0 1px 0 rgba(255, 255, 255, .75);
+      --ease: cubic-bezier(.32, .72, 0, 1);
+      --ease-press: cubic-bezier(.2, .8, .2, 1);
+      --r-lg: 18px;
+      --r-md: 12px;
+      --tap: 44px;
+      --tile-filter: grayscale(.82) sepia(.2) contrast(.92) brightness(1.03);
+    }
+    :root[data-theme="dark"] {
+      --paper: #14191C;
+      --paper-2: #1B2226;
+      --paper-3: #20292E;
+      --ink: #ECE6D6;
+      --ink-2: #BDB6A6;
+      --ink-3: #A39D8F;
+      --rule: #333D42;
+      --rule-strong: #ECE6D6;
+
+      --green: #3FB488;
+      --green-ink: #6FD0A8;
+      --green-wash: #183229;
+      --orange: #F29350;
+      --ochre: #E0B544;
+      --red: #F07A6E;
+      --route-other: #6E7479;
+      --on-green: #0B1512;
+
+      --shadow-sheet: 0 -24px 48px -12px rgba(0, 0, 0, .6);
+      --shadow-pop: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 28px -8px rgba(0, 0, 0, .55);
+      --shadow-lift: 0 1px 1px rgba(0, 0, 0, .25), 0 4px 12px -4px rgba(0, 0, 0, .45);
+      --hi: inset 0 1px 0 rgba(255, 255, 255, .05);
+      --tile-filter: invert(1) hue-rotate(180deg) grayscale(.75) brightness(.78) contrast(.9);
+    }
+
+    /* ── 바탕 ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; background: var(--paper); color: var(--ink);
+      font: 400 15px/1.45 var(--font); letter-spacing: -0.01em;
+      -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent;
+      overflow: hidden;
+    }
+    button, input { font: inherit; color: inherit; letter-spacing: inherit; }
+    button { cursor: pointer; }
+    :focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+    .ic { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+    .ic-sm { width: 16px; height: 16px; }
+    .num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum", "ss06"; }
+
+    .app { display: grid; height: 100dvh; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+
+    /* ── 쪽 머리 (헤더) ────────────────────────────────── */
+    .masthead {
+      position: relative; z-index: 1200; background: var(--paper);
+      padding: max(6px, env(safe-area-inset-top)) 16px 12px;
+      border-bottom: 3px double var(--rule-strong);
+    }
+    .brandline { display: flex; align-items: center; justify-content: space-between; height: 44px; }
+    .wordmark { margin: 0; font-size: 21px; font-weight: 900; letter-spacing: -0.04em; }
+    .brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+    .tagline { font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wordmark small { font-size: 12px; font-weight: 700; color: var(--green); margin-left: 3px; letter-spacing: 0; }
+    .icon-btn {
+      width: var(--tap); height: var(--tap); display: inline-grid; place-items: center;
+      border: 0; background: transparent; border-radius: 10px; color: var(--ink);
+    }
+    .icon-btn { transition: background .25s var(--ease), transform .18s var(--ease-press); }
+    .icon-btn:hover { background: var(--paper-2); }
+    .icon-btn:active, .chip:active, .seg button:active, .text-btn:active, .btn-line:active, .tab:active { transform: scale(.97); }
+
+    .route-form { display: grid; grid-template-columns: minmax(0, 1fr) var(--tap); gap: 6px 8px; margin-top: 2px; }
+    .field { position: relative; }
+    .field-box {
+      display: flex; align-items: center; height: var(--tap);
+      background: var(--paper-3); border: 1px solid var(--rule); border-radius: var(--r-md);
+      box-shadow: var(--hi), 0 0 0 3px color-mix(in srgb, var(--paper-2) 70%, transparent);
+      transition: border-color .25s var(--ease), box-shadow .25s var(--ease);
+    }
+    .field-box:focus-within { border-color: var(--green); box-shadow: var(--hi), 0 0 0 3px color-mix(in srgb, var(--green) 18%, transparent); }
+    .field-tag {
+      width: 52px; flex-shrink: 0; display: flex; align-items: center; gap: 6px; padding-left: 12px;
+      font-size: 12px; font-weight: 700; color: var(--ink-2);
+    }
+    .field-tag::before { content: ""; width: 8px; height: 8px; border-radius: 50%; border: 2px solid var(--ink); flex-shrink: 0; }
+    .field-end .field-tag::before { background: var(--ink); }
+    .field input {
+      flex: 1; min-width: 0; height: 100%; border: 0; background: transparent; outline: none;
+      padding: 0 12px 0 2px; font-size: 16px; font-weight: 600;
+    }
+    .field input::placeholder { color: var(--ink-3); font-weight: 500; }
+    .swap-btn { grid-column: 2; grid-row: 1 / span 2; align-self: center; border: 1px solid var(--rule); background: var(--paper-3); border-radius: 50%; box-shadow: var(--hi), var(--shadow-lift); }
+    .swap-btn .ic { transition: transform .45s var(--ease); }
+    .swap-btn:hover .ic { transform: rotate(180deg); }
+    .submit-btn {
+      grid-column: 1 / -1; height: calc(var(--tap) + 4px); border: 0; border-radius: 999px;
+      background: var(--green); color: var(--on-green); font-weight: 700; font-size: 15px;
+      display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 5px 0 20px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 1px 2px rgba(31, 42, 48, .2), 0 8px 20px -8px rgba(31, 42, 48, .45);
+      transition: background .3s var(--ease), transform .18s var(--ease-press), opacity .2s;
+    }
+    .submit-btn:hover { background: var(--green-ink); }
+    .submit-btn:active { transform: scale(.985); }
+    .submit-btn .btn-orb {
+      width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center;
+      background: rgba(255, 255, 255, .16); transition: transform .45s var(--ease);
+    }
+    :root[data-theme="dark"] .submit-btn .btn-orb { background: rgba(0, 0, 0, .14); }
+    :root[data-theme="dark"] .submit-btn { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 1px 2px rgba(0, 0, 0, .4), 0 8px 20px -8px rgba(0, 0, 0, .6); }
+    .submit-btn:hover .btn-orb { transform: translateX(2px) scale(1.05); }
+    .submit-btn[aria-busy="true"] { opacity: .7; pointer-events: none; }
+
+    .suggest {
+      position: absolute; top: calc(100% + 4px); left: 0; right: -52px; z-index: 1300;
+      margin: 0; padding: 4px 0; list-style: none; max-height: 300px; overflow: auto;
+      background: var(--paper-3); border: 1px solid var(--rule); border-radius: var(--r-md); box-shadow: var(--shadow-pop);
+      animation: pop-in .22s var(--ease);
+    }
+    @keyframes pop-in { from { opacity: 0; transform: translateY(-4px); } }
+    .suggest[hidden] { display: none; }
+    .suggest li + li { border-top: 1px solid var(--rule); }
+    .suggest button {
+      width: 100%; min-height: var(--tap); display: flex; align-items: center; gap: 10px;
+      padding: 8px 14px; border: 0; background: transparent; text-align: left;
+    }
+    .suggest button:hover { background: var(--paper-2); }
+    .s-name { display: block; font-weight: 700; font-size: 14px; }
+    .s-addr { display: block; font-size: 12px; color: var(--ink-3); }
+    .s-quick { color: var(--green); }
+
+    .summary { display: none; }
+    .summary-btn {
+      width: 100%; min-height: var(--tap); display: flex; align-items: center; gap: 8px;
+      border: 1px solid var(--rule); border-radius: 999px; background: var(--paper-3); padding: 0 8px 0 16px; text-align: left;
+      box-shadow: var(--hi), var(--shadow-lift); transition: transform .18s var(--ease-press);
+    }
+    .summary-btn:active { transform: scale(.99); }
+    .sum-edit { padding: 6px 12px; border-radius: 999px; background: var(--green-wash); }
+    .sum-places { flex: 1; min-width: 0; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sum-edit { font-size: 13px; font-weight: 600; color: var(--green); }
+
+    /* ── 무대: 지도 + 색인표 ───────────────────────────── */
+    .stage { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; min-height: 0; min-width: 0; }
+    #map { min-height: 0; background: var(--paper-2); }
+    .leaflet-container { font-family: var(--font); background: var(--paper-2); }
+    .leaflet-tile-pane { filter: var(--tile-filter); }
+    .leaflet-bar { border: 1px solid var(--rule) !important; border-radius: var(--r-md) !important; overflow: hidden; box-shadow: var(--shadow-pop) !important; }
+    .leaflet-bar a, .map-ctl button {
+      width: 40px !important; height: 40px !important; line-height: 40px !important;
+      background: var(--paper-3) !important; color: var(--ink) !important; border-color: var(--rule) !important;
+    }
+    .map-ctl button { display: grid; place-items: center; border: 0; padding: 0; }
+    .leaflet-control-attribution { background: color-mix(in srgb, var(--paper) 85%, transparent) !important; color: var(--ink-3) !important; font-size: 10px; }
+    .leaflet-control-attribution a { color: var(--ink-2) !important; }
+
+    .index {
+      position: relative; z-index: 1000; background: var(--paper); border-top: 1px solid var(--rule-strong);
+      display: flex; flex-direction: column; min-height: 0; min-width: 0; max-height: 50dvh;
+    }
+    #indexContent.flow { display: contents; }
+    body.has-route .stage { grid-template-rows: 38% minmax(0, 1fr); }
+    body.has-route.list-large .stage { grid-template-rows: 20% minmax(0, 1fr); }
+    body.has-route .index { max-height: none; }
+
+    /* 경로 탭: 지도책 엄지 색인 */
+    .tabs { display: flex; gap: 4px; padding: 10px 16px 0; background: var(--paper-2); border-bottom: 1px solid var(--rule); overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
+    .tabs:empty { display: none; }
+    .tab {
+      flex: 1 1 0; min-width: 0; min-height: 52px; padding: 7px 10px 8px; text-align: left;
+      border: 1px solid var(--rule); border-bottom: 0; border-radius: 10px 10px 0 0;
+      background: transparent; color: var(--ink-2); position: relative; top: 1px;
+    }
+    .tab b { display: block; font-size: 13px; font-weight: 700; }
+    .tab span { display: block; font-size: 12px; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tab b + span { margin-top: 1px; }
+    .tab { transition: background .3s var(--ease), color .3s var(--ease), transform .18s var(--ease-press); }
+    .tab[aria-pressed="true"] { background: var(--paper); color: var(--ink); box-shadow: inset 0 3px 0 var(--green), 0 -6px 14px -10px rgba(31, 42, 48, .35); }
+    .tab[data-kind="free"][aria-pressed="true"] { box-shadow: inset 0 3px 0 var(--orange-fill); }
+
+    .index-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px 6px 16px; flex-shrink: 0; }
+    .index-head > div { flex: 1; min-width: 0; }
+    .index-sub { margin: 1px 0 0; font-size: 12px; color: var(--ink-3); }
+    .list.enter > li { animation: row-in .5s var(--ease) both; animation-delay: calc(min(var(--i, 0), 10) * 35ms); }
+    @keyframes row-in { from { opacity: 0; transform: translateY(8px); } }
+    .index-title { margin: 0; flex: 1; min-width: 0; font-size: 13px; font-weight: 600; color: var(--ink-2); }
+    .index-title strong { color: var(--ink); font-size: 15px; font-weight: 800; }
+    .text-btn {
+      min-height: 36px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent;
+      font-size: 13px; font-weight: 600; color: var(--green); display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0;
+    }
+    .text-btn:hover { background: var(--paper-2); }
+
+    .chips { display: flex; gap: 6px; padding: 4px 16px 10px; overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
+    .chip {
+      flex-shrink: 0; min-height: 36px; padding: 0 12px; border-radius: 18px;
+      border: 1px solid var(--rule); background: var(--paper-3); color: var(--ink-2);
+      font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;
+      transition: background .3s var(--ease), color .3s var(--ease), border-color .3s var(--ease), transform .18s var(--ease-press);
+    }
+    .chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+    .chip-layer::before { content: ""; width: 10px; height: 10px; border-radius: 2px; border: 2px solid var(--ink-3); }
+    .chip-layer[aria-pressed="true"] { background: var(--paper-3); color: var(--ink); border: 1px solid var(--ochre); }
+    .chip-layer[aria-pressed="true"]::before { border-color: var(--ochre); }
+    .chip, .seg button, .text-btn { position: relative; }
+    .chip::after, .seg button::after, .text-btn::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: var(--tap); transform: translateY(-50%); }
+    .chip-sep { width: 1px; background: var(--rule); margin: 6px 2px; flex-shrink: 0; }
+
+    .list { list-style: none; margin: 0; padding: 0 0 max(16px, env(safe-area-inset-bottom)); overflow-y: auto; flex: 1; min-height: 0; overscroll-behavior: contain; }
+    .list > li { border-top: 1px dotted var(--rule); }
+    .list > li:first-child { border-top: 1px solid var(--rule); }
+    .row {
+      width: 100%; display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 12px; align-items: start;
+      padding: 12px 16px; border: 0; background: transparent; text-align: left; transition: background .35s var(--ease);
+    }
+    .row:hover { background: color-mix(in srgb, var(--paper-2) 70%, transparent); }
+    .row.is-active { background: var(--green-wash); }
+    .sym {
+      width: 28px; height: 28px; margin-top: 1px; display: grid; place-items: center;
+      font-size: 13px; font-weight: 800; border-radius: 50%; background: var(--green); color: var(--on-green);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 1px 2px rgba(31, 42, 48, .25);
+      transition: transform .35s var(--ease);
+    }
+    .row:active .sym { transform: scale(.92); }
+    .row.is-active .sym { transform: scale(1.08); }
+    .sym-drowsy { width: 20px; height: 20px; margin: 4px 4px 0; border-radius: 4px; background: transparent; border: 2px solid var(--ochre); }
+    .sym-gas { background: var(--orange-fill); color: #fff; }
+    .row-name { display: flex; align-items: baseline; font-size: 16px; font-weight: 700; letter-spacing: -0.02em; }
+    .row-name::after { content: ""; flex: 1; min-width: 16px; margin: 0 -12px 0 8px; border-bottom: 2px dotted var(--rule); transform: translateY(-4px); }
+    .row-sub { display: block; font-size: 13px; color: var(--ink-2); margin-top: 1px; }
+    .row-facts { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 6px; font-size: 13px; color: var(--ink-2); }
+    .row-facts b { color: var(--ink); font-weight: 700; }
+    .fact { display: inline-flex; align-items: center; gap: 3px; }
+    .fact .ic { width: 15px; height: 15px; }
+    .fact-fav { color: var(--red); font-weight: 700; }
+    .row-dist { text-align: right; white-space: nowrap; }
+    .row-dist b { font-size: 17px; font-weight: 800; }
+    .row-dist small { font-size: 12px; color: var(--ink-3); margin-left: 1px; }
+    .row-dist .eta { display: block; font-size: 12px; color: var(--ink-3); margin-top: 1px; }
     
-    body { overflow: hidden; background: #f8fafc; color: #1e293b; transition: background 0.3s; }
-    #splash-screen { background-color: #f8fafc; color: #1e293b; }
-    #splash-screen p { color: #64748b; }
-    #navbar { background: #ffffff; color: #1e293b; border-bottom: 1px solid #e2e8f0; }
-    .input-box { background: #f1f5f9; color: #1e293b; border: 1px solid #cbd5e1; }
-    .btn-swap { background: #e2e8f0; border: 1px solid #cbd5e1; color: #2563eb; }
-    .btn-settings { background: #e2e8f0; border: 1px solid #cbd5e1; color: #1e293b; }
-    .rest-tag { background: #ffffff; color: #2563eb; border: 1px solid #2563eb; }
 
-    /* 다크 모드 완벽 적용 */
-    body.dark-theme { background: #0f172a; color: white; }
-    body.dark-theme #splash-screen { background-color: #0f172a; color: white; }
-    body.dark-theme #splash-screen p { color: #94a3b8; }
-    body.dark-theme #navbar { background: #1e293b; border-bottom: none; color: white; }
-    body.dark-theme .input-box { background: #0f172a; color: white; border: 1px solid #475569; }
-    body.dark-theme .btn-swap { background: #334155; border: 1px solid #475569; color: #38bdf8; }
-    body.dark-theme .btn-settings { background: #334155; border: 1px solid #475569; color: white; }
-    body.dark-theme .rest-tag { background: #0f172a; color: #38bdf8; border: 1px solid #38bdf8; }
-    body.dark-theme .leaflet-tile-pane { filter: invert(100%) hue-rotate(180deg) brightness(85%) contrast(90%); }
-    body.dark-theme .dev-text { color: #cbd5e1 !important; }
-    
-    body.dark-theme .modal-content { background: #0f172a; color: white; }
-    body.dark-theme .place-select-box { background: #0f172a; color: white; border: 1px solid #334155; }
-    body.dark-theme .place-select-box h3 { color: white !important; }
-    body.dark-theme .place-item { background: #1e293b; border-color: #334155; color: white; }
-    body.dark-theme .place-item-title { color: white; }
-    body.dark-theme .setting-row select, 
-    body.dark-theme .setting-row input[type="text"], 
-    body.dark-theme .setting-row input[type="time"] { background: #1e293b; color: white; border-color: #475569; }
-    
-    body.dark-theme .autocomplete-dropdown { background: #1e293b; border-color: #475569; color: white; }
-    body.dark-theme .autocomplete-dropdown li { border-bottom-color: #334155; color: white; }
-    body.dark-theme .autocomplete-dropdown li:hover { background: #334155; }
-    body.dark-theme .ac-title { color: white; }
-    body.dark-theme .fab-main { background: #0f172a; }
+    /* 빈 상태·로딩 */
+    .empty { padding: 14px 16px max(16px, env(safe-area-inset-bottom)); }
+    .empty h2 { margin: 0 0 4px; font-size: 17px; font-weight: 800; letter-spacing: -0.02em; }
+    .empty p { margin: 0 0 12px; font-size: 14px; color: var(--ink-2); }
+    .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 12px 0 0; padding: 10px 0 0; border-top: 1px solid var(--rule); font-size: 12px; color: var(--ink-2); }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .legend i { width: 12px; height: 12px; border-radius: 50%; background: var(--green); display: inline-block; }
+    .legend i.l-drowsy { border-radius: 3px; background: transparent; border: 2px solid var(--ochre); }
+    .legend i.l-gas { background: var(--orange-fill); }
+    .quick { display: flex; flex-wrap: wrap; gap: 8px; }
+    .quick .chip { min-height: var(--tap); padding: 0 14px; border-radius: 10px; color: var(--ink); }
+    .skel { height: 64px; margin: 0 16px; border-top: 1px solid var(--rule); position: relative; flex-shrink: 0; }
+    .skel::before, .skel::after { content: ""; position: absolute; left: 42px; height: 12px; border-radius: 6px; background: var(--paper-2); animation: pulse 1.2s ease-in-out infinite; }
+    .skel::before { top: 16px; width: 45%; }
+    .skel::after { top: 36px; width: 70%; }
+    @keyframes pulse { 50% { opacity: .45; } }
 
-    #splash-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; transition: opacity 0.5s ease; }
-    #splash-screen h1 { font-size: 32px; font-weight: 900; color: #38bdf8; margin-bottom: 10px; }
-    
-    #navbar { height: 56px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 2000; position: relative; gap: 4px; }
-    .search-container { display: flex; gap: 4px; align-items: center; width: 100%; justify-content: space-between; }
-    
-    .input-wrapper { position: relative; width: 26%; flex-grow: 1; }
-    .input-box { padding: 7px 6px; border-radius: 6px; font-size: 13px; width: 100%; outline: none; text-align: center; }
+    /* ── 지도 표식 ─────────────────────────────────────── */
+    .mk { display: grid; place-items: center; font: 800 12px/1 var(--font); color: #fff; border: 2px solid #fff; box-shadow: 0 1px 1px rgba(31,42,48,.18), 0 3px 8px -2px rgba(31,42,48,.35); }
+    .mk-rest { width: 26px; height: 26px; border-radius: 50%; background: #0E7A55; transition: transform .15s; }
+    .mk-rest { transition: transform .4s var(--ease), background .3s var(--ease); }
+    .mk-rest.is-active { background: #1F2A30; transform: scale(1.25); }
+    .mk-wrap { display: grid; place-items: center; }
+    .mk-drowsy { width: 16px; height: 16px; border-radius: 4px; background: #F3EFE4; border-color: #8A6400; }
+    :root[data-theme="dark"] .mk-drowsy { background: #20292E; border-color: #E0B544; }
+    .far .mk-rest:not(.is-active) { width: 12px; height: 12px; font-size: 0; border-width: 1.5px; }
+    .far .mk-gas, .far .mk-drowsy { width: 8px; height: 8px; border-width: 1px; }
+    .far .mk-gas { opacity: .8; }
+    .km-tick { font: 700 10px/1 var(--font); color: #1F2A30; background: #F3EFE4; border: 1px solid #1F2A30; border-radius: 3px; padding: 2px 3px; white-space: nowrap; transform: translate(7px, -130%); width: max-content; }
+    .far .km-tick:not(.km-100) { display: none; }
+    .map-legend { background: var(--paper-3); border: 1px solid var(--rule); border-radius: 999px; padding: 6px 12px; font: 600 11px/1.3 var(--font); color: var(--ink-2); display: flex; gap: 8px; box-shadow: var(--shadow-pop); }
+    .map-legend:empty { display: none; }
+    .map-legend span { display: inline-flex; align-items: center; gap: 4px; }
+    .map-legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+    .leaflet-control-scale-line { background: color-mix(in srgb, var(--paper) 85%, transparent); border-color: var(--ink); color: var(--ink); font: 600 10px/1.4 var(--font); text-shadow: none; }
+    .mk-gas { width: 18px; height: 18px; border-radius: 50%; background: #E2701F; }
+    .mk-fav { box-shadow: 0 0 0 3px #B3342A, 0 3px 8px -2px rgba(31,42,48,.35); }
+    .mk-start { width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 4px solid #1F2A30; }
+    .mk-end { width: 16px; height: 16px; border-radius: 50%; background: #1F2A30; }
+    .mk-me { width: 16px; height: 16px; border-radius: 50%; background: #2F6FDB; border: 3px solid #fff; box-shadow: 0 0 0 6px rgba(47,111,219,.2); }
+    .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--paper-3); color: var(--ink); box-shadow: var(--shadow-pop); }
+    .leaflet-popup-content { margin: 12px 30px 12px 14px; font: 600 13px/1.4 var(--font); }
+    .leaflet-popup-content-wrapper { border-radius: var(--r-md); }
 
-    .autocomplete-dropdown { position: absolute; top: 100%; left: 0; width: 180%; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; max-height: 220px; overflow-y: auto; z-index: 9999; list-style: none; margin-top: 4px; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-    .autocomplete-dropdown li { padding: 10px; border-bottom: 1px solid #e2e8f0; cursor: pointer; color: #0f172a; text-align: left; }
-    .autocomplete-dropdown li:hover { background: #e0f2fe; }
-    .ac-title { font-size: 12px; font-weight: 800; color: #1e293b; margin-bottom: 2px; }
-    .ac-addr { font-size: 10px; color: #64748b; }
+    /* ── 시트 (상세·설정·장소 고르기) ───────────────────── */
+    dialog.sheet {
+      width: 100%; max-width: 560px; max-height: 88dvh; margin: auto auto 0; padding: 0;
+      border: 0; border-radius: 22px 22px 0 0; background: var(--paper); color: var(--ink); position: fixed;
+      box-shadow: var(--shadow-sheet); overflow: hidden;
+    }
+    dialog.sheet[open] { display: flex; flex-direction: column; animation: sheet-in .5s var(--ease); }
+    dialog.sheet::backdrop { background: rgba(20, 25, 28, .42); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); animation: fade-in .3s var(--ease); }
+    dialog.sheet::before { content: ""; position: absolute; top: 7px; left: 50%; width: 36px; height: 4px; margin-left: -18px; border-radius: 2px; background: var(--rule); }
+    @keyframes sheet-in { from { transform: translateY(40px); opacity: 0; } }
+    @keyframes fade-in { from { opacity: 0; } }
+    .sheet-head { display: flex; align-items: flex-start; gap: 8px; padding: 20px 8px 12px 16px; border-bottom: 3px double var(--rule-strong); flex-shrink: 0; }
+    .sheet-head > div { flex: 1; min-width: 0; }
+    .sheet-title { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.03em; }
+    .sheet-sub { margin: 2px 0 0; font-size: 13px; color: var(--ink-2); }
+    .sheet-body { overflow-y: auto; padding: 0 16px max(20px, env(safe-area-inset-bottom)); overscroll-behavior: contain; }
 
-    .btn-swap { width: 32px; height: 32px; border-radius: 6px; font-size: 15px; font-weight: bold; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
-    .btn-search { padding: 7px 10px; border-radius: 6px; border: none; font-weight: 700; font-size: 13px; background: #2563eb; color: white; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
-    .btn-settings { padding: 5px; border-radius: 6px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex-shrink: 0; }
+    .sec { padding: 14px 0; border-bottom: 1px solid var(--rule); }
+    .sec:last-child { border-bottom: 0; }
+    .sec h3 { margin: 0 0 10px; font-size: 13px; font-weight: 700; color: var(--ink-2); display: flex; align-items: center; gap: 6px; }
+    .fuel-table { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 1px solid var(--rule); border-radius: var(--r-md); overflow: hidden; box-shadow: var(--hi), 0 0 0 4px var(--paper-2); margin: 4px; }
+    .fuel-cell { padding: 10px 12px; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); background: var(--paper-3); }
+    .fuel-cell:nth-child(2n) { border-right: 0; }
+    .fuel-cell:nth-last-child(-n+2) { border-bottom: 0; }
+    .fuel-cell .k { font-size: 12px; color: var(--ink-2); font-weight: 600; }
+    .fuel-cell .v { font-size: 17px; font-weight: 800; margin-top: 2px; }
+    .fuel-cell .v.off { color: var(--ink-3); font-weight: 600; font-size: 14px; }
+    .ev-line { margin: 10px 0 0; font-size: 13px; color: var(--ink-2); }
+    .ev-line b { color: var(--ink); }
+    .amen { display: flex; flex-wrap: wrap; gap: 8px; }
+    .amen span, .amen a {
+      display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px;
+      border: 1px solid var(--rule); border-radius: 18px; font-size: 13px; font-weight: 600; background: var(--paper-3); color: var(--ink);
+      text-decoration: none;
+    }
+    .amen .off { color: var(--ink-3); background: transparent; border-style: dashed; }
+    .amen a { color: var(--green); border-color: var(--green); min-height: var(--tap); border-radius: 999px; transition: background .3s var(--ease); }
+    .amen a:hover { background: var(--green-wash); }
+    .brand-list, .menu-list { list-style: none; margin: 0; padding: 0; }
+    .brand-list li, .menu-list li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px dotted var(--rule); font-size: 14px; }
+    .brand-list li:first-child, .menu-list li:first-child { border-top: 0; }
+    .brand-list small, .menu-list small { color: var(--ink-3); font-size: 12px; }
+    .menu-list .price { font-weight: 700; white-space: nowrap; }
+    .menu-list .best { font-size: 11px; font-weight: 700; color: var(--green); margin-left: 6px; }
+    .menu-list .fav { color: var(--red); font-weight: 700; }
+    .seg { display: flex; gap: 4px; overflow-x: auto; margin-bottom: 8px; scrollbar-width: none; }
+    .seg button { flex-shrink: 0; min-height: 36px; padding: 0 12px; border: 1px solid var(--rule); border-radius: 18px; background: var(--paper-3); font-size: 13px; font-weight: 600; color: var(--ink-2); }
+    .seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+    .kv { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; border: 1px solid var(--rule); border-radius: var(--r-md); overflow: hidden; box-shadow: var(--hi), 0 0 0 4px var(--paper-2); margin: 4px; }
+    .kv > div { padding: 10px 4px; background: var(--paper-3); }
+    .kv > div + div { border-left: 1px solid var(--rule); }
+    .kv .k { font-size: 12px; color: var(--ink-2); }
+    .kv .v { font-size: 17px; font-weight: 800; }
+    .foot { margin: 14px 0 0; font-size: 12px; color: var(--ink-3); }
+    .usage { display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; background: var(--paper-2); color: var(--ink-2); }
+    .usage[hidden] { display: none; }
 
-    #statusBadge { position: absolute; bottom: 20px; left: 15px; z-index: 1100; background: rgba(15, 23, 42, 0.9); border: 1px solid #38bdf8; color: #38bdf8; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; display: none; }
+    /* 설정 */
+    .set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; padding: 6px 0; }
+    .set-row + .set-row { border-top: 1px dotted var(--rule); }
+    .set-row[hidden] { display: none; }
+    .set-row label, .set-row .lbl { font-size: 14px; font-weight: 600; }
+    .hint { display: block; font-size: 12px; color: var(--ink-3); font-weight: 400; }
+    .set-input { position: relative; flex: 1; max-width: 230px; }
+    .set-input input, .times input {
+      width: 100%; height: 40px; padding: 0 12px; border: 1px solid var(--rule); border-radius: 8px;
+      background: var(--paper-3); font-size: 15px; outline: none;
+    }
+    .set-input input:focus, .times input:focus { border-color: var(--green); }
+    .set-input .suggest { right: 0; left: auto; width: min(320px, calc(100vw - 32px)); }
+    .times { display: flex; align-items: center; gap: 6px; }
+    .times input { width: 112px; }
+    .btn-line {
+      min-height: 40px; padding: 0 14px; border: 1px solid var(--rule); border-radius: 8px;
+      background: var(--paper-3); font-size: 14px; font-weight: 600; flex-shrink: 0;
+    }
+    .btn-line:hover { border-color: var(--ink-2); }
+    .credit { margin: 0; font-size: 13px; color: var(--ink-2); line-height: 1.7; }
 
-    /* [1번 기능 반영] 방사형(Radial) FAB 애니메이션 스타일 */
-    .fab-container { position: absolute; right: 15px; bottom: 25px; z-index: 1100; width: 46px; height: 46px; }
-    .fab-main { width: 100%; height: 100%; border-radius: 50%; font-size: 22px; background: #ffffff; border: 2px solid #38bdf8; color: #38bdf8; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); position: relative; z-index: 10; transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; align-items: center; justify-content: center; }
-    .fab-container.open .fab-main { transform: scale(0.9); }
-    .fab-sub { position: absolute; top: 3px; left: 3px; width: 40px; height: 40px; border-radius: 50%; border: none; color: white; font-size: 11px; font-weight: bold; cursor: pointer; opacity: 0; transform: scale(0); transition: all 0.35s cubic-bezier(0.68, -0.55, 0.265, 1.55); z-index: 5; box-shadow: 0 3px 8px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; }
-    .fab-center { background: #475569; font-size: 16px; }
-    .fab-start { background: #2563eb; }
-    .fab-end { background: #059669; }
-    .fab-container.open .fab-center { transform: translate(0px, -55px) scale(1); opacity: 1; }
-    .fab-container.open .fab-start { transform: translate(-45px, -35px) scale(1); opacity: 1; }
-    .fab-container.open .fab-end { transform: translate(-55px, 10px) scale(1); opacity: 1; }
+    .pick-list { list-style: none; margin: 0; padding: 0; }
+    .pick-list li + li { border-top: 1px solid var(--rule); }
+    .pick-list button { width: 100%; min-height: 56px; padding: 10px 0; border: 0; background: transparent; text-align: left; }
 
-    #toggleGasBtn { display: none; position: absolute; right: 15px; z-index: 1100; width: 46px; height: 46px; border-radius: 50%; font-size: 20px; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3); bottom: 85px; background: #ea580c; border: 2px solid white; color: white; }
+    /* 알림 */
+    .toast {
+      position: fixed; left: 50%; bottom: max(20px, env(safe-area-inset-bottom)); z-index: 3000;
+      transform: translate(-50%, 16px); opacity: 0; pointer-events: none;
+      width: max-content; max-width: calc(100vw - 32px); padding: 12px 16px; border-radius: 10px;
+      background: var(--ink); color: var(--paper); font-size: 14px; font-weight: 600; box-shadow: var(--shadow-pop); border-radius: 999px; padding: 12px 20px;
+      transition: transform .45s var(--ease), opacity .3s var(--ease);
+    }
+    .toast.show { transform: translate(-50%, 0); opacity: 1; }
 
-    #routeSelectorBar { display: none; position: absolute; top: 66px; left: 12px; z-index: 1000; background: rgba(255, 255, 255, 0.96); backdrop-filter: blur(8px); padding: 8px; border-radius: 14px; border: 1px solid #38bdf8; box-shadow: 0 6px 18px rgba(0,0,0,0.18); flex-direction: column; gap: 6px; width: 175px; }
-    body.dark-theme #routeSelectorBar { background: rgba(15, 23, 42, 0.94); }
-    .route-tab-btn { width: 100%; padding: 8px 10px; border-radius: 10px; border: 1px solid #e2e8f0; font-size: 12px; font-weight: 800; background: #f8fafc; color: #475569; cursor: pointer; text-align: left; line-height: 1.35; transition: all 0.2s; }
-    body.dark-theme .route-tab-btn { background: #1e293b; border-color: #334155; color: #cbd5e1; }
-    .route-tab-btn span { font-size: 10px; font-weight: 600; opacity: 0.85; display: block; margin-top: 2px; }
-    .route-tab-btn.active { background: #2563eb !important; color: white !important; border-color: #2563eb !important; box-shadow: 0 3px 8px rgba(37,99,235,0.4); }
-    .route-tab-btn.active span { opacity: 1; }
+    /* ── 모바일: 경로가 잡히면 입력칸을 요약 한 줄로 접는다 ── */
+    @media (max-width: 899px) {
+      body.has-route:not(.editing) .route-form { display: none; }
+      body.has-route:not(.editing) .summary { display: block; margin-top: 2px; }
+      body.has-route:not(.editing) .masthead { padding-bottom: 10px; }
+    }
 
-    #map { height: calc(100vh - 56px); width: 100vw; z-index: 1; }
+    /* ── 넓은 화면: 왼쪽 색인표, 오른쪽 지도 ───────────── */
+    @media (min-width: 900px) {
+      .app { grid-template-columns: 420px minmax(0, 1fr); }
+      .masthead { grid-column: 1; grid-row: 1; border-right: 1px solid var(--rule-strong); }
+      .stage, body.has-route .stage { display: contents; }
+      #map { grid-column: 2; grid-row: 1 / span 2; }
+      .index { grid-column: 1; grid-row: 2; max-height: none; border-top: 0; border-right: 1px solid var(--rule-strong); }
+      .suggest { right: 0; }
+      .list-toggle { display: none !important; }
+      dialog.sheet { margin: auto; border-radius: 16px; }
+      #detailSheet:not(:modal) { position: fixed; inset: 0 auto 0 0; z-index: 1500; width: 420px; max-width: 420px; height: 100dvh; max-height: none; margin: 0; border-radius: 0; border-right: 1px solid var(--rule-strong); box-shadow: 8px 0 28px rgba(31, 42, 48, .12); }
+    }
 
-    .rest-unified-marker { cursor: pointer !important; display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); }
-    .rest-tag { border-radius: 6px; padding: 3px 8px; font-size: 11px; font-weight: 800; white-space: nowrap; box-shadow: 0 3px 6px rgba(0,0,0,0.3); }
-    .rest-dot { width: 12px; height: 12px; background: #0284c7; border: 2px solid #ffffff; border-radius: 50%; margin-top: 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.4); }
-
-    .overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(4px); z-index: 2500; justify-content: center; align-items: center; }
-    .overlay.active { display: flex; }
-    
-    .place-select-box { background: white; width: 92%; max-width: 420px; max-height: 75vh; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-    .place-select-header { background: #1e293b; color: white; padding: 14px 16px; font-size: 14px; font-weight: bold; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #38bdf8; }
-    .place-list { overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-    .place-item { padding: 10px 12px; border-radius: 8px; border: 1px solid #cbd5e1; background: #f8fafc; cursor: pointer; text-align: left; }
-
-    #modalOverlay { align-items: flex-end; z-index: 2000; }
-    .modal-content { background: #ffffff; width: 100%; max-height: 85vh; border-radius: 20px 20px 0 0; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 -10px 25px rgba(0,0,0,0.4); color: #1e293b; }
-    .modal-header-banner { position: relative; padding: 16px 20px; background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%); color: white; border-bottom: 3px solid #38bdf8; }
-    .btn-modal-close { position: absolute; top: 14px; right: 14px; width: 32px; height: 32px; border-radius: 50%; border: none; background: rgba(255,255,255,0.2); color: white; font-size: 16px; cursor: pointer; font-weight: bold; }
-    .modal-body { padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
-    
-    .fact-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; }
-    body.dark-theme .fact-card { background: #1e293b; border-color: #334155; }
-    body.dark-theme .fact-card h4 { color: #f8fafc; }
-
-    .fact-card h4 { font-size: 14px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
-    .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-size: 13px; font-weight: 600; gap: 10px; }
-    .setting-row > span { flex-shrink: 0; }
-    .setting-row .input-wrapper, .setting-row input, .setting-row select { flex-grow: 1; min-width: 0; text-align: right; }
-    .setting-row .input-wrapper .input-box { width: 100%; text-align: right; }
-    body.dark-theme .setting-row { color: #e2e8f0; }
-    body.light-theme .setting-row { color: #334155; }
-    .setting-row select, .setting-row input[type="text"], .setting-row input[type="time"] { padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; font-size: 13px; outline: none; background: white; color: #1e293b;}
-    
-    .badge { display: inline-block; padding: 3px 6px; font-size: 11px; font-weight: 700; border-radius: 5px; color: white; margin-bottom: 4px; }
-    .badge-혼잡 { background: #ef4444; } .badge-보통 { background: #f59e0b; } .badge-원활 { background: #10b981; }
-    .brand-pill { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; margin-right: 4px; margin-bottom: 4px; }
-    body.dark-theme .brand-pill { background: #1e3a8a; color: #bfdbfe; border-color: #2563eb; }
-    
-    .store-tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 10px; }
-    .store-tab-btn { padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: white; color: #334155; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
-    body.dark-theme .store-tab-btn { background: #334155; color: #e2e8f0; border-color: #475569; }
-    .store-tab-btn.active { background: #0284c7; color: white; border-color: #0284c7; }
-    
-    .menu-cards-grid { display: grid; grid-template-columns: 1fr; gap: 8px; max-height: 220px; overflow-y: auto; }
-    .food-card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; gap: 10px; padding: 6px; align-items: center; }
-    body.dark-theme .food-card { background: #0f172a; border-color: #334155; }
-    .food-card img { width: 56px; height: 56px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
-    .food-name { font-size: 13px; font-weight: 800; color: #1e293b; }
-    body.dark-theme .food-name { color: #f8fafc; }
-    .food-price { font-size: 13px; font-weight: 800; color: #d97706; margin-top: 2px; }
-
-    .fuel-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 10px; }
-    .fuel-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 3px; }
-    body.dark-theme .fuel-card { background: #0f172a; border-color: #334155; }
-    .fuel-title { font-size: 11px; font-weight: 700; color: #64748b; display: flex; justify-content: space-between; align-items: center; }
-    body.dark-theme .fuel-title { color: #94a3b8; }
-    .fuel-val { font-size: 14px; font-weight: 900; color: #1e293b; }
-    body.dark-theme .fuel-val { color: #f8fafc; }
-    .fuel-status-badge { font-size: 10px; padding: 1px 5px; border-radius: 4px; font-weight: 700; }
-    .status-on { background: #dcfce7; color: #166534; }
-    .status-off { background: #f1f5f9; color: #94a3b8; }
-    
-    .ev-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px; margin-top: 6px; }
-    body.dark-theme .ev-box { background: #064e3b; border-color: #047857; }
-    .ev-op-badge { background: #15803d; color: white; font-size: 10px; font-weight: 700; padding: 2px 5px; border-radius: 4px; }
-    .ev-spec-pill { background: #dcfce7; color: #166534; font-size: 10px; font-weight: 700; padding: 2px 5px; border-radius: 4px; }
-    .ev-price-text { font-size: 11px; color: #ca8a04; font-weight: 800; display: block; margin-top: 4px; }
-    
-    .dev-text { font-size: 12px; color: #475569; line-height: 1.6; }
-    .leaflet-popup-content { margin: 12px !important; line-height: 1.4; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
   </style>
 </head>
-<body class="light-theme">
+<body>
+<!--
+THESIS: 경로를 도로지도책 한 쪽처럼 찍고, 휴게소는 그 쪽의 번호 색인표에서 비교한다. 지도 위에 이름 라벨을 쌓는 지도앱 기본형을 거부한다.
+OWN-WORLD: 무광 종이 바탕과 먹색 글자, 고속도로 초록·주유 주황·졸음쉼터 황토의 범례 기호, 이중선 쪽 머리, 점선 색인 괘선, 인쇄 톤으로 누른 지도.
+STORY: 출발 전·휴게 중인 운전자가 경로를 고르고, 내 방향 휴게소를 거리순으로 훑고, 유가·충전·편의시설을 보고 들를 곳을 정한다.
+FIRST VIEWPORT: 위 쪽 머리에 출발·도착 입력과 '경로 찾기', 아래 지도. 경로가 잡히면 입력은 한 줄 요약으로 접히고 지도 38% / 경로 탭 + 번호 색인표.
+FORM: 도로지도책(후보 4번), seed ef3d29c8.
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
+-->
 
-  <div id="splash-screen">
-    <h1>쉬어갈카<span style="font-size: 16px; margin-left: 4px;">car</span></h1>
-    <p>고속도로 휴게소의 모든 것</p>
+  <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+    <symbol id="i-swap" viewBox="0 0 24 24"><path d="M8 4v16M4 8l4-4 4 4M16 20V4M12 16l4 4 4-4"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+    <symbol id="i-locate" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11 12 4l9 7M5.5 9.5V20h13V9.5M10 20v-5h4v5"/></symbol>
+    <symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5"/></symbol>
+    <symbol id="i-fuel" viewBox="0 0 24 24"><rect x="4" y="4" width="10" height="16" rx="1.5"/><path d="M4 10h10M14 8h2a2 2 0 0 1 2 2v6a1.5 1.5 0 0 0 3 0V9l-3-3"/></symbol>
+    <symbol id="i-plug" viewBox="0 0 24 24"><path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0V8ZM12 17v4"/></symbol>
+    <symbol id="i-flame" viewBox="0 0 24 24"><path d="M12 3c3 4 6 6.5 6 10.5a6 6 0 0 1-12 0c0-2.8 1.6-4.6 3-6.5.8 1.6 1.8 2.6 3 3 .3-2.3.3-4.6 0-7Z"/></symbol>
+    <symbol id="i-bottle" viewBox="0 0 24 24"><path d="M10 3h4M10.5 3v3M13.5 3v3M9 8.5A2.5 2.5 0 0 1 11 6h2a2.5 2.5 0 0 1 2 2.5V19a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2V8.5ZM9 13h6"/></symbol>
+    <symbol id="i-pill" viewBox="0 0 24 24"><path d="M10.5 20.5a5 5 0 0 1-7-7l6-6a5 5 0 0 1 7 7l-6 6ZM8.5 8.5l7 7"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><path d="M5 4h3.5l2 5-2.5 1.5a11 11 0 0 0 5.5 5.5L15 13.5l5 2V19a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2Z"/></symbol>
+    <symbol id="i-parking" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M10 17V7h3a3 3 0 0 1 0 6h-3"/></symbol>
+    <symbol id="i-cup" viewBox="0 0 24 24"><path d="M4 9h12v4a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V9ZM16 10.5h1.5a2 2 0 0 1 0 4H16M8 3v3M12 3v3"/></symbol>
+    <symbol id="i-bowl" viewBox="0 0 24 24"><path d="M3 12h18a9 9 0 0 1-18 0ZM8 12 15 4M11 12l7-6"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3.5 2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 17l-5.2 2.7 1-5.9-4.3-4.1 5.9-.8Z"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></symbol>
+  </svg>
+
+  <div class="app">
+    <header class="masthead">
+      <div class="brandline">
+        <div class="brand"><h1 class="wordmark">쉬어갈카<small>car</small></h1><span class="tagline">고속도로 휴게소의 모든 것</span></div>
+        <button class="icon-btn" id="openSettings" type="button" aria-label="설정"><svg class="ic"><use href="#i-sliders"/></svg></button>
+      </div>
+
+      <form class="route-form" id="routeForm" autocomplete="off" novalidate>
+        <div class="field field-start">
+          <label class="field-box">
+            <span class="field-tag">출발</span>
+            <input id="startInput" type="text" enterkeyhint="next" placeholder="출발지 검색" aria-controls="startSuggest" aria-autocomplete="list" />
+          </label>
+          <ul class="suggest" id="startSuggest" role="listbox" hidden></ul>
+        </div>
+        <button class="icon-btn swap-btn" id="swapBtn" type="button" aria-label="출발지와 도착지 바꾸기"><svg class="ic"><use href="#i-swap"/></svg></button>
+        <div class="field field-end">
+          <label class="field-box">
+            <span class="field-tag">도착</span>
+            <input id="endInput" type="text" enterkeyhint="search" placeholder="도착지 검색" aria-controls="endSuggest" aria-autocomplete="list" />
+          </label>
+          <ul class="suggest" id="endSuggest" role="listbox" hidden></ul>
+        </div>
+        <button class="submit-btn" id="submitBtn" type="submit"><span>경로 찾기</span><span class="btn-orb" aria-hidden="true"><svg class="ic"><use href="#i-route"/></svg></span></button>
+      </form>
+
+      <div class="summary">
+        <button class="summary-btn" id="summaryBtn" type="button">
+          <span class="sum-places" id="summaryText"></span>
+          <span class="sum-edit">바꾸기</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="stage">
+      <div id="map" aria-label="경로 지도"></div>
+      <section class="index" id="indexPanel" aria-label="휴게소 색인">
+        <div class="tabs" id="routeTabs" role="group" aria-label="경로 후보"></div>
+        <div id="indexContent"></div>
+      </section>
+    </main>
   </div>
 
-  <div id="navbar">
-    <div class="search-container">
-      <div class="input-wrapper">
-        <input type="text" id="startInput" class="input-box" placeholder="출발지" autocomplete="off" />
-        <ul id="startDropdown" class="autocomplete-dropdown"></ul>
+  <dialog class="sheet" id="detailSheet" aria-labelledby="detailTitle">
+    <div class="sheet-head">
+      <div>
+        <h2 class="sheet-title" id="detailTitle"></h2>
+        <p class="sheet-sub" id="detailSub"></p>
+        <span class="usage" id="detailUsage" hidden></span>
       </div>
-      <button class="btn-swap" onclick="swapLocations()" title="출발/도착 전환">⇄</button>
-      <div class="input-wrapper">
-        <input type="text" id="endInput" class="input-box" placeholder="목적지" autocomplete="off" />
-        <ul id="endDropdown" class="autocomplete-dropdown"></ul>
-      </div>
-      <button class="btn-search" onclick="handleSearchRoute()">탐색</button>
-      
-      <button class="btn-settings" onclick="document.getElementById('homeActionOverlay').classList.add('active')" title="내 집 주소 불러오기">🏠</button>
-      <button class="btn-settings" onclick="openSettings()" title="앱 설정">⚙️</button>
+      <button class="icon-btn" type="button" data-close aria-label="닫기"><svg class="ic"><use href="#i-close"/></svg></button>
     </div>
-  </div>
+    <div class="sheet-body" id="detailBody"></div>
+  </dialog>
 
-  <div id="statusBadge">준비 중...</div>
-  
-  <!-- [1번 기능 개선] 방사형 애니메이션 FAB 버튼 (기존 팝업 대체) -->
-  <div id="fab-container" class="fab-container">
-    <button class="fab-main" onclick="toggleFab()" title="내 위치 메뉴">🎯</button>
-    <button class="fab-sub fab-center" onclick="goToCurrentLocation(); toggleFab();" title="지도 중앙 이동">📍</button>
-    <button class="fab-sub fab-start" onclick="setCurrentLocationAs('start'); toggleFab();" title="현위치를 출발지로">출발</button>
-    <button class="fab-sub fab-end" onclick="setCurrentLocationAs('end'); toggleFab();" title="현위치를 도착지로">도착</button>
-  </div>
-  
-  <div id="toggleGasBtn" onclick="toggleGasStations()" title="주유소 숨기기">⛽</div>
-  <div id="routeSelectorBar"></div>
-  <div id="map"></div>
-
-  <!-- 집 주소 출발/도착 선택 팝업 -->
-  <div id="homeActionOverlay" class="overlay">
-    <div class="place-select-box" style="padding: 20px; text-align: center; max-width: 320px;">
-      <h3 style="margin-bottom: 15px; font-size: 16px; color: #1e293b;">내 집 주소 설정</h3>
-      <div style="display: flex; gap: 10px; justify-content: center;">
-        <button class="btn-search" style="flex-grow: 1; padding: 10px;" onclick="setHomeAs('start')">출발지로</button>
-        <button class="btn-search" style="flex-grow: 1; padding: 10px; background: #059669;" onclick="setHomeAs('end')">목적지로</button>
-      </div>
-      <button onclick="document.getElementById('homeActionOverlay').classList.remove('active')" style="margin-top: 15px; border: none; background: transparent; color: #64748b; font-weight: bold; cursor: pointer; padding: 5px;">취소</button>
+  <dialog class="sheet" id="settingsSheet" aria-labelledby="settingsTitle">
+    <div class="sheet-head">
+      <div><h2 class="sheet-title" id="settingsTitle">설정</h2></div>
+      <button class="icon-btn" type="button" data-close aria-label="닫기"><svg class="ic"><use href="#i-close"/></svg></button>
     </div>
-  </div>
-
-  <div id="settingsOverlay" class="overlay" onclick="handleSettingsClick(event)" style="z-index: 2600; align-items: flex-end;">
-    <div class="modal-content" style="max-height: 90vh;">
-      <div class="modal-header-banner" style="background: linear-gradient(135deg, #0f172a 0%, #334155 100%);">
-        <button class="btn-modal-close" onclick="closeSettings()">✕</button>
-        <h1 style="font-size: 18px; font-weight: 900; margin-top: 2px;">앱 설정</h1>
-      </div>
-      <div class="modal-body">
-        
-        <div class="fact-card" style="border-left: 4px solid #10b981;">
-          <h4>🚙 맞춤 정보 및 목적지</h4>
-          <div class="setting-row">
-            <span>내 차 연료 필터</span>
-            <select id="fuelSelect">
-              <option value="ALL">모두 보기 (기본)</option>
-              <option value="GAS">주유소(휘발유/경유) 우선</option>
-              <option value="LPG">LPG 충전소 우선</option>
-              <option value="EV">전기차 충전소 우선</option>
-            </select>
-          </div>
-          <div class="setting-row">
-            <span>🏠 내 집 주소 저장</span>
-            <div class="input-wrapper">
-              <input type="text" id="homeInput" class="input-box" placeholder="동/도로명 입력" autocomplete="off" />
-              <ul id="homeDropdown" class="autocomplete-dropdown" style="width: 100%; right: 0; left: auto; max-height: 150px;"></ul>
-            </div>
-          </div>
-          <div class="setting-row" style="margin-bottom: 0;">
-            <span>🍜 선호 음식(메뉴) 강조</span>
-            <input type="text" id="foodInput" class="input-box" placeholder="예: 우동" />
-          </div>
-          <div class="setting-row" style="justify-content: flex-end; margin-top: 10px; margin-bottom: 0;">
-            <button class="btn-search" style="background:#2563eb;" onclick="saveSettingsBtn()">💾 설정 저장</button>
+    <div class="sheet-body">
+      <section class="sec">
+        <h3>내 정보</h3>
+        <div class="set-row">
+          <label for="homeInput">집 주소<span class="hint">입력칸에서 '집'으로 바로 불러와요</span></label>
+          <div class="set-input">
+            <input id="homeInput" type="text" placeholder="동·도로명·건물명" aria-controls="homeSuggest" autocomplete="off" />
+            <ul class="suggest" id="homeSuggest" role="listbox" hidden></ul>
           </div>
         </div>
-
-        <div class="fact-card" style="border-left: 4px solid #3b82f6;">
-          <h4>📱 테마 화면 설정</h4>
-          <div class="setting-row">
-            <span>다크 모드 강제/자동 선택</span>
-            <select id="darkConfig" onchange="applyThemeAndSave()">
-              <option value="LIGHT">항상 밝게</option>
-              <option value="DARK">항상 어둡게</option>
-              <option value="AUTO">시간대 자동 (야간주행용)</option>
-            </select>
-          </div>
-          <div class="setting-row" id="timeSettingBox" style="display:none; justify-content: flex-end; gap:6px;">
-            <span style="font-size:11px; color:#64748b;">작동시간</span>
-            <input type="time" id="darkStartTime" value="18:00" onchange="applyThemeAndSave()" style="width:90px;" />
-            <span style="font-size:11px; color:#64748b;">~</span>
-            <input type="time" id="darkEndTime" value="06:00" onchange="applyThemeAndSave()" style="width:90px;" />
+        <div class="set-row">
+          <label for="foodInput">즐겨 먹는 메뉴<span class="hint">파는 휴게소에 별표를 달아요</span></label>
+          <div class="set-input"><input id="foodInput" type="text" placeholder="예: 우동" autocomplete="off" /></div>
+        </div>
+      </section>
+      <section class="sec">
+        <h3>화면</h3>
+        <div class="set-row">
+          <span class="lbl">테마</span>
+          <div class="seg" id="themeSeg" style="margin:0">
+            <button type="button" data-theme-mode="LIGHT">밝게</button>
+            <button type="button" data-theme-mode="DARK">어둡게</button>
+            <button type="button" data-theme-mode="AUTO">시간대 자동</button>
           </div>
         </div>
-
-        <div class="fact-card" style="border-left: 4px solid #ef4444;">
-          <h4>🛠 앱 관리</h4>
-          <div class="setting-row" style="margin-bottom: 12px;">
-            <span>검색 기록 및 지도 초기화</span>
-            <button class="btn-search" style="background:#64748b;" onclick="resetView(); closeSettings();">초기화 실행</button>
-          </div>
-          <div class="setting-row" style="margin-bottom: 0;">
-            <span>최신 정보 강제 업데이트</span>
-            <button class="btn-search" style="background:#059669;" onclick="forceAppUpdate()">🔄 업데이트</button>
+        <div class="set-row" id="themeTimes" hidden>
+          <span class="lbl">어둡게 할 시간</span>
+          <div class="times">
+            <input type="time" id="darkStart" aria-label="시작 시각" />
+            <span aria-hidden="true">~</span>
+            <input type="time" id="darkEnd" aria-label="끝 시각" />
           </div>
         </div>
-
-        <div class="fact-card" style="border-left: 4px solid #8b5cf6;">
-          <h4>👨‍💻 개발자 프로필</h4>
-          <div class="dev-text">
-            <b>• 개발자:</b> L.H.H<br>
-            <b>• Mail:</b> xellosmx@naver.com<br>
-          </div>
+      </section>
+      <section class="sec">
+        <h3>앱 관리</h3>
+        <div class="set-row">
+          <span class="lbl">경로·입력 지우기</span>
+          <button class="btn-line" type="button" id="resetBtn">지우기</button>
         </div>
-
-      </div>
+        <div class="set-row">
+          <span class="lbl">최신 버전 받기<span class="hint">저장된 캐시를 비우고 다시 불러와요</span></span>
+          <button class="btn-line" type="button" id="updateBtn">다시 불러오기</button>
+        </div>
+      </section>
+      <section class="sec">
+        <h3>만든 사람</h3>
+        <p class="credit">L.H.H · <a href="mailto:xellosmx@naver.com" style="color:inherit">xellosmx@naver.com</a><br />지도 © OpenStreetMap · 장소·길찾기 카카오 · 유가 오피넷</p>
+      </section>
     </div>
-  </div>
+  </dialog>
 
-  <div id="placeSelectOverlay" class="overlay">
-    <div class="place-select-box">
-      <div class="place-select-header">
-        <span id="placeSelectTitle">장소를 선택해 주세요</span>
-        <button onclick="cancelPlaceSelection()" style="background:transparent; border:none; color:white; font-size:16px; cursor:pointer;">✕</button>
-      </div>
-      <div class="place-list" id="placeListContainer"></div>
+  <dialog class="sheet" id="pickSheet" aria-labelledby="pickTitle">
+    <div class="sheet-head">
+      <div><h2 class="sheet-title" id="pickTitle">장소 고르기</h2><p class="sheet-sub" id="pickSub"></p></div>
+      <button class="icon-btn" type="button" data-close aria-label="닫기"><svg class="ic"><use href="#i-close"/></svg></button>
     </div>
-  </div>
+    <div class="sheet-body"><ul class="pick-list" id="pickList"></ul></div>
+  </dialog>
 
-  <!-- 휴게소 상세 모달 -->
-  <div id="modalOverlay" class="overlay" onclick="handleOverlayClick(event)">
-    <div class="modal-content" id="modalContent">
-      <div class="modal-header-banner">
-        <button class="btn-modal-close" onclick="closeModal()">✕</button>
-        <span id="mBadge" class="badge badge-보통">보통</span>
-        <h1 id="mTitle" style="font-size: 18px; font-weight: 900; margin-top: 2px;">휴게소 명칭</h1>
-        <p id="mRoute" style="font-size: 12px; color: #93c5fd;">노선 정보</p>
-      </div>
-      <div class="modal-body">
-        
-        <div class="fact-card" style="border-left: 4px solid #f97316;">
-          <h4>⛽ 주유소 및 충전소 안내</h4>
-          <div class="fuel-grid">
-            <div class="fuel-card">
-              <div class="fuel-title"><span>🔴 휘발유</span><span id="gasBadge" class="fuel-status-badge status-off">확인중</span></div>
-              <div id="gasPriceVal" class="fuel-val">-</div>
-            </div>
-            <div class="fuel-card">
-              <div class="fuel-title"><span>🔵 경유 (디젤)</span><span id="dieselBadge" class="fuel-status-badge status-off">확인중</span></div>
-              <div id="dieselPriceVal" class="fuel-val">-</div>
-            </div>
-            <div class="fuel-card">
-              <div class="fuel-title"><span>🟠 LPG 충전소</span><span id="lpgBadge" class="fuel-status-badge status-off">확인중</span></div>
-              <div id="lpgPriceVal" class="fuel-val">-</div>
-            </div>
-            <div class="fuel-card">
-              <div class="fuel-title"><span>⚡ 전기차 (EV)</span><span id="evBadge" class="fuel-status-badge status-off">확인중</span></div>
-              <div id="evSummaryVal" class="fuel-val">-</div>
-            </div>
-          </div>
-          <div id="evDetailBox" class="ev-box" style="display:none; margin-top:6px;">
-            <div id="evHeader" style="font-size: 12px; font-weight: 800; color: #15803d; margin-bottom: 4px;"></div>
-            <div id="evOperators" style="margin-bottom: 4px;"></div>
-            <div id="evOutputs" style="font-size: 11px; color: #166534;"></div>
-            <div id="evPriceInfo" class="ev-price-text"></div>
-          </div>
-        </div>
-
-        <div class="fact-card" id="foodCardDiv" style="border-left: 4px solid #3b82f6;">
-          <h4>☕ 입점 브랜드</h4>
-          <div id="mBrandList"></div>
-        </div>
-        
-        <div class="fact-card" id="menuCardDiv" style="border-left: 4px solid #0284c7;">
-          <h4>🍽️ 메뉴 및 가격표</h4>
-          <div class="store-tabs" id="mStoreTabs"></div>
-          <div class="menu-cards-grid" id="mMenuGrid"></div>
-        </div>
-        
-        <div class="fact-card" id="parkCardDiv">
-          <h4>🅿️ 주차 시설</h4>
-          <div style="font-size: 12px; margin-top: 2px;">총 주차면수: <b id="mTotalPark">-</b>대 (소형 <span id="mSmallPark">-</span> / 대형 <span id="mLargePark">-</span>)</div>
-        </div>
-
-      </div>
-    </div>
-  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script>
-    proj4.defs("KATEC", "+proj=tmerc +lat_0=38 +lon_0=128 +k=0.9999 +x_0=400000 +y_0=600000 +ellps=bessel +towgs84=-115.80,474.99,674.11,1.16,-2.31,-1.63,6.43 +units=m +no_defs");
-    const EV_RATES = { "기후에너지환경부": "약 347.2원/kWh", "한국전력": "약 347.2원/kWh", "현대엔지니어링": "약 347.2원/kWh", "에버온": "약 330원/kWh", "채비(CHAEVI)": "약 340원/kWh" };
-    const KAKAO_REST_API_KEY = '9ab57e47f2e219d0972329862be77d25';
-    const OPINET_API_KEY = 'F260915130'; 
-    const map = L.map('map', { zoomControl: false }).setView([36.5, 127.8], 8);
-    L.control.zoom({ position: 'topright' }).addTo(map);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' }).addTo(map);
+  'use strict';
 
-    let allRestAreas = [];
-    let markersLayer = L.layerGroup().addTo(map);
-    let gasMarkersLayer = L.layerGroup().addTo(map);
-    let routeLayersGroup = L.layerGroup().addTo(map);
-    let userLocationLayer = L.layerGroup().addTo(map);
-    let arrowLayersGroup = L.layerGroup().addTo(map); 
-    
-    let foundRoutes = [];
-    let currentUserLatLng = null;
-    let watchId = null;
-    let animTimerId = null;
-    let arrowOffset = 0;
-    let isGasVisible = true;
-    let currentArrowLayer = null;
-    let activePolyline = null;
+  /* ── 설정 ───────────────────────────────────────────────
+     API_BASE: Cloudflare Worker 주소(예: https://shigeo.<계정>.workers.dev).
+     채우면 모든 외부 호출이 Worker로 가고, 아래 두 키는 지운다.
+     비워 두면 임시로 키를 직접 쓴다 — Worker 배포 후 반드시 비우고 키를 재발급할 것. */
+  const CONFIG = {
+    API_BASE: '',
+    KAKAO_REST_API_KEY: '9ab57e47f2e219d0972329862be77d25',
+    OPINET_API_KEY: 'F260915130',
+    DATA_URL: 'rest_areas_master.json',
+    REST_MAX_KM: 0.6,     // 휴게소 좌표는 도로 중심에서 60~250m 옆에 찍혀 있다
+    DROWSY_MAX_KM: 0.6,
+    GAS_MAX_KM: 1.5,
+  };
+  const EV_RATES = { '기후에너지환경부': '약 347원/kWh', '한국전력': '약 347원/kWh', '현대엔지니어링': '약 347원/kWh', '에버온': '약 330원/kWh', '채비(CHAEVI)': '약 340원/kWh' };
+  const USAGE_LABEL = { '혼잡': '평소 이용 많음', '보통': '평소 이용 보통', '원활': '평소 이용 적음' };
 
-    const defaultImg = 'https://images.unsplash.com/photo-1541832676-9b763b0239ab?auto=format&fit=crop&w=150&q=80';
-    const statusBadge = document.getElementById('statusBadge');
+  proj4.defs('KATEC', '+proj=tmerc +lat_0=38 +lon_0=128 +k=0.9999 +x_0=400000 +y_0=600000 +ellps=bessel +towgs84=-115.80,474.99,674.11,1.16,-2.31,-1.63,6.43 +units=m +no_defs');
 
-    fetch('rest_areas_master.json?v=' + Date.now(), { cache: 'no-store' }).then(res => res.json()).then(data => { allRestAreas = data; initUserLocation(); }).catch(e => {});
-
-    map.on('zoomstart', () => { 
-      if (animTimerId) clearInterval(animTimerId); 
-      arrowLayersGroup.clearLayers(); 
+  /* ── 작은 도구 ─────────────────────────────────────────── */
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const SVGNS = 'http://www.w3.org/2000/svg';
+  function h(tag, attrs, ...children) {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      if (v == null || v === false) continue;
+      if (k === 'class') el.className = v;
+      else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? '' : v);
+    }
+    for (const c of children.flat()) {
+      if (c == null || c === false || c === '') continue;
+      el.append(c.nodeType ? c : document.createTextNode(String(c)));
+    }
+    return el;
+  }
+  function icon(name, cls = 'ic') {
+    const s = document.createElementNS(SVGNS, 'svg');
+    s.setAttribute('class', cls); s.setAttribute('aria-hidden', 'true');
+    const u = document.createElementNS(SVGNS, 'use'); u.setAttribute('href', '#i-' + name);
+    s.append(u); return s;
+  }
+  const store = {
+    get(k, d = null) { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+    del(k) { try { localStorage.removeItem(k); } catch {} },
+  };
+  let toastTimer;
+  function toast(msg, ms = 3400) {
+    const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), ms);
+  }
+  const debounce = (fn, ms) => { let id; return (...a) => { clearTimeout(id); id = setTimeout(() => fn(...a), ms); }; };
+  const fmtWon = (n) => `${Number(n).toLocaleString('ko-KR')}원`;
+  function fmtDuration(sec) {
+    const m = Math.round(sec / 60), hh = Math.floor(m / 60), mm = m % 60;
+    return hh ? `${hh}시간 ${mm}분` : `${mm}분`;
+  }
+  function parsePrice(v) {
+    if (v == null || v === 'X' || v === '') return null;
+    const n = Number(String(v).replace(/[,원\s]/g, ''));
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+  // '칠곡(부산)' → { base: '칠곡', toward: '부산' }
+  function splitName(name = '') {
+    const m = name.match(/^(.*?)\((.+)\)$/);
+    if (!m) return { base: name, toward: null };
+    return { base: m[1], toward: m[2] === '통합' ? null : m[2] };
+  }
+  function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+  async function pool(items, limit, fn) {
+    const out = new Array(items.length); let i = 0;
+    const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+      while (i < items.length) { const idx = i++; out[idx] = await fn(items[idx]); }
     });
-    map.on('zoomend', () => {
-      if (activePolyline && foundRoutes.length > 0) {
-        arrowLayersGroup.clearLayers();
-        currentArrowLayer = L.polylineDecorator(activePolyline, { patterns: [{ offset: 0, repeat: 100, symbol: L.Symbol.arrowHead({ pixelSize: 12, polygon: false, pathOptions: { stroke: true, weight: 3, color: '#ffffff', opacity: 1 } }) }] }).addTo(arrowLayersGroup);
-        animTimerId = setInterval(() => {
-          arrowOffset = (arrowOffset + 2) % 100;
-          if(currentArrowLayer && currentArrowLayer.options) {
-            const p = currentArrowLayer.options.patterns;
-            if(p && p[0]) { p[0].offset = arrowOffset; currentArrowLayer.setPatterns(p); }
-          }
-        }, 40);
-      }
+    await Promise.all(workers); return out;
+  }
+
+  /* ── 외부 API (API_BASE가 있으면 Worker로) ─────────────── */
+  class ApiError extends Error { constructor(status, msg) { super(msg); this.status = status; } }
+  async function getJSON(url, opts) {
+    let res;
+    try { res = await fetch(url, opts); } catch { throw new ApiError(0, 'network'); }
+    if (!res.ok) throw new ApiError(res.status, 'http ' + res.status);
+    return res.json();
+  }
+  const kakaoHeaders = () => ({ headers: { Authorization: `KakaoAK ${CONFIG.KAKAO_REST_API_KEY}` } });
+  function kakaoLocal(kind, params) {
+    const qs = new URLSearchParams(params).toString();
+    if (CONFIG.API_BASE) return getJSON(`${CONFIG.API_BASE}/kakao/local/${kind}?${qs}`);
+    return getJSON(`https://dapi.kakao.com/v2/local/search/${kind}.json?${qs}`, kakaoHeaders());
+  }
+  function kakaoDirections(params) {
+    const qs = new URLSearchParams(params).toString();
+    if (CONFIG.API_BASE) return getJSON(`${CONFIG.API_BASE}/kakao/directions?${qs}`);
+    return getJSON(`https://apis-navi.kakaomobility.com/v1/directions?${qs}`, kakaoHeaders());
+  }
+  async function opinetAround(params) {
+    const qs = new URLSearchParams({ ...params, out: 'json' }).toString();
+    if (CONFIG.API_BASE) return getJSON(`${CONFIG.API_BASE}/opinet/around?${qs}`);
+    // 임시: Worker 배포 전까지만 공개 CORS 프록시를 거친다(키가 제3자 서버를 지나감).
+    const target = `http://www.opinet.co.kr/api/aroundAll.do?code=${CONFIG.OPINET_API_KEY}&${qs}`;
+    const wrap = await getJSON(`https://api.allorigins.win/get?url=${encodeURIComponent(target)}`);
+    return JSON.parse(wrap.contents);
+  }
+  function apiErrorText(err) {
+    if (err && (err.status === 401 || err.status === 403)) return '카카오 API 인증에 실패했어요. 키나 프록시 주소를 확인해 주세요.';
+    if (err && err.status === 429) return '오늘 조회 한도를 넘었어요. 잠시 후 다시 시도해 주세요.';
+    if (err && err.status === 0) return '인터넷 연결을 확인해 주세요.';
+    return '잠시 문제가 생겼어요. 다시 시도해 주세요.';
+  }
+  async function searchPlaces(q) {
+    const data = await kakaoLocal('keyword', { query: q.trim(), size: 15 });
+    return (data.documents || []).map(d => ({ name: d.place_name, address: d.road_address_name || d.address_name, lat: +d.y, lng: +d.x }));
+  }
+
+  /* ── 기하: 경로 투영 ────────────────────────────────────
+     경로를 km 평면으로 펴고, 점마다 가장 가까운 선분·누적 거리·좌우를 구한다.
+     우측통행이라 진행 방향 오른쪽(외적 < 0)에 있는 휴게소가 내 방향이다. */
+  function buildGeo(coords) {
+    const lat0 = coords[0][0], kx = Math.cos(lat0 * Math.PI / 180) * 111.32, ky = 110.574;
+    const xy = coords.map(([la, ln]) => [ln * kx, la * ky]);
+    const cum = [0];
+    let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+    for (let i = 0; i < coords.length; i++) {
+      const [la, ln] = coords[i];
+      if (la < minLat) minLat = la; if (la > maxLat) maxLat = la;
+      if (ln < minLng) minLng = ln; if (ln > maxLng) maxLng = ln;
+      if (i) cum.push(cum[i - 1] + Math.hypot(xy[i][0] - xy[i - 1][0], xy[i][1] - xy[i - 1][1]));
+    }
+    return { xy, cum, kx, ky, bbox: { minLat, maxLat, minLng, maxLng }, total: cum[cum.length - 1] };
+  }
+  function inBox(g, lat, lng, pad = 0.02) {
+    const b = g.bbox;
+    return lat >= b.minLat - pad && lat <= b.maxLat + pad && lng >= b.minLng - pad && lng <= b.maxLng + pad;
+  }
+  function project(g, lat, lng) {
+    const px = lng * g.kx, py = lat * g.ky;
+    let best = { dist: Infinity, km: 0, right: false };
+    for (let i = 0; i < g.xy.length - 1; i++) {
+      const [ax, ay] = g.xy[i], [bx, by] = g.xy[i + 1];
+      const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+      let t = l2 ? ((px - ax) * dx + (py - ay) * dy) / l2 : 0;
+      t = t < 0 ? 0 : t > 1 ? 1 : t;
+      const d = Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+      if (d < best.dist) best = { dist: d, km: g.cum[i] + t * Math.sqrt(l2), right: dx * (py - ay) - dy * (px - ax) < 0 };
+    }
+    return best;
+  }
+  function samplePoints(coords, g, everyKm, cap) {
+    const pts = [coords[0]]; let next = everyKm;
+    for (let i = 1; i < coords.length; i++) if (g.cum[i] >= next) { pts.push(coords[i]); next += everyKm; }
+    pts.push(coords[coords.length - 1]);
+    if (pts.length <= cap) return pts;
+    const step = pts.length / cap; return Array.from({ length: cap }, (_, i) => pts[Math.floor(i * step)]);
+  }
+
+  /* ── 상태 ─────────────────────────────────────────────── */
+  const state = {
+    areas: [], dataReady: false,
+    start: null, end: null,
+    routes: [], active: -1, geo: null,
+    items: [], extrasLoading: false,
+    fuel: store.get('pref_fuel', 'ALL'),
+    showDrowsy: store.get('pref_show_drowsy', '1') === '1',
+    me: null, watchId: null,
+    run: 0, activeKey: null,
+  };
+  if (!['ALL', 'GAS', 'LPG', 'EV'].includes(state.fuel)) state.fuel = 'ALL';
+
+  /* ── 지도 ─────────────────────────────────────────────── */
+  const map = L.map('map', { zoomControl: false }).setView([36.4, 127.9], 7);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' }).addTo(map);
+  L.control.zoom({ position: 'topright', zoomInTitle: '확대', zoomOutTitle: '축소' }).addTo(map);
+  L.control.scale({ position: 'bottomleft', imperial: false, maxWidth: 90 }).addTo(map);
+  const LegendCtl = L.Control.extend({ options: { position: 'bottomleft' }, onAdd() { return L.DomUtil.create('div', 'map-legend'); } });
+  const legendCtl = new LegendCtl(); map.addControl(legendCtl);
+  function setLegend(kind) {
+    const el = legendCtl.getContainer(); el.replaceChildren();
+    if (!kind) return;
+    const item = (color, label, square) => h('span', null, h('i', { style: `background:${square ? '#F3EFE4' : color};${square ? `border:2px solid ${color};border-radius:2px;width:7px;height:7px` : ''}` }), label);
+    if (kind === 'free') el.append(item('#E2701F', '주유소'));
+    else { el.append(item('#0E7A55', '휴게소')); if (state.showDrowsy) el.append(item('#8A6400', '졸음쉼터', true)); }
+  }
+  const syncFar = () => map.getContainer().classList.toggle('far', map.getZoom() < 9);
+  map.on('zoomend', syncFar); syncFar();
+  const LocateCtl = L.Control.extend({
+    options: { position: 'topright' },
+    onAdd() {
+      const wrap = L.DomUtil.create('div', 'leaflet-bar map-ctl');
+      const btn = L.DomUtil.create('button', '', wrap);
+      btn.type = 'button'; btn.setAttribute('aria-label', '내 위치로'); btn.title = '내 위치로';
+      btn.append(icon('locate'));
+      L.DomEvent.disableClickPropagation(wrap);
+      btn.addEventListener('click', () => locateMe({ center: true }));
+      return wrap;
+    },
+  });
+  map.addControl(new LocateCtl());
+  const layers = {
+    routes: L.layerGroup().addTo(map),
+    arrows: L.layerGroup().addTo(map),
+    ends: L.layerGroup().addTo(map),
+    items: L.layerGroup().addTo(map),
+    me: L.layerGroup().addTo(map),
+  };
+  const markerByKey = new Map();
+  const dot = (cls, size) => L.divIcon({ className: 'mk-wrap', html: `<div class="mk ${cls}"></div>`, iconSize: [size, size], iconAnchor: [size / 2, size / 2] });
+
+  /* ── 데이터 ───────────────────────────────────────────── */
+  async function loadData() {
+    try {
+      const res = await fetch(CONFIG.DATA_URL);
+      if (!res.ok) throw new Error(res.status);
+      state.areas = await res.json(); state.dataReady = true;
+      if (state.routes.length) selectRoute(state.active);
+    } catch {
+      toast('휴게소 데이터를 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침해 주세요.', 6000);
+    }
+  }
+
+  /* ── 위치 ─────────────────────────────────────────────── */
+  function setMe(pos) {
+    state.me = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    layers.me.clearLayers();
+    L.marker([state.me.lat, state.me.lng], { icon: dot('mk-me', 16), keyboard: false, interactive: false }).addTo(layers.me);
+  }
+  function locateMe({ center = false } = {}) {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) { toast('이 브라우저는 위치 기능을 지원하지 않아요.'); return resolve(null); }
+      navigator.geolocation.getCurrentPosition((pos) => {
+        setMe(pos); startWatch();
+        if (center) map.setView([state.me.lat, state.me.lng], 14);
+        resolve(state.me);
+      }, (err) => {
+        toast(err.code === 1 ? '위치 권한이 꺼져 있어요. 브라우저 설정에서 허용해 주세요.' : '현재 위치를 찾지 못했어요. 잠시 후 다시 시도해 주세요.');
+        resolve(null);
+      }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 15000 });
     });
+  }
+  function startWatch() {
+    if (state.watchId != null || !navigator.geolocation || document.hidden) return;
+    state.watchId = navigator.geolocation.watchPosition(setMe, () => {}, { enableHighAccuracy: false, maximumAge: 15000, timeout: 20000 });
+  }
+  function stopWatch() { if (state.watchId != null) { navigator.geolocation.clearWatch(state.watchId); state.watchId = null; } }
+  document.addEventListener('visibilitychange', () => { if (document.hidden) stopWatch(); else if (state.me) startWatch(); });
+  // 이미 허용된 경우에만 조용히 위치를 켠다(첫 화면에서 권한 팝업을 띄우지 않음)
+  if (navigator.permissions && navigator.geolocation) {
+    navigator.permissions.query({ name: 'geolocation' }).then(p => { if (p.state === 'granted') locateMe(); }).catch(() => {});
+  }
 
-    // 지도 터치 시 FAB 메뉴 닫기
-    map.on('click', () => { document.getElementById('fab-container').classList.remove('open'); });
+  /* ── 집 주소 ──────────────────────────────────────────── */
+  function getHome() {
+    const raw = store.get('pref_home');
+    if (!raw) return null;
+    try { const o = JSON.parse(raw); if (o && o.name) return o; } catch {}
+    return { name: raw };   // 예전 버전: 글자만 저장돼 있음
+  }
+  async function resolveHome() {
+    const home = getHome();
+    if (!home) { toast('설정에서 집 주소를 먼저 저장해 주세요.'); openSettings(); return null; }
+    if (Number.isFinite(home.lat)) return home;
+    try {
+      const r = await searchPlaces(home.name);
+      if (!r.length) { toast('저장된 집 주소를 찾지 못했어요. 설정에서 다시 골라 주세요.'); return null; }
+      const fixed = { ...r[0], name: home.name };
+      store.set('pref_home', JSON.stringify(fixed)); return fixed;
+    } catch (e) { toast(apiErrorText(e)); return null; }
+  }
 
-    window.addEventListener('load', function() {
-      setTimeout(function() { const splash = document.getElementById('splash-screen'); if (splash) { splash.style.opacity = '0'; setTimeout(() => { splash.style.display = 'none'; }, 500); } }, 2000);
-      loadSettings(); setInterval(checkAutoTheme, 60000); 
+  /* ── 입력칸·자동완성 ──────────────────────────────────── */
+  const inputs = { start: $('#startInput'), end: $('#endInput') };
+  const suggests = { start: $('#startSuggest'), end: $('#endSuggest') };
+  const suggestSeq = { start: 0, end: 0, home: 0 };
+
+  function setPlace(which, place) { state[which] = place; inputs[which].value = place ? place.name : ''; }
+  function hideSuggest(el) { el.hidden = true; el.replaceChildren(); }
+  function hideAllSuggest() { document.querySelectorAll('.suggest').forEach(hideSuggest); }
+
+  function quickItems(which) {
+    const home = getHome();
+    return [
+      { label: '현재 위치', sub: '지금 있는 곳', icon: 'locate', run: async () => {
+        const me = state.me || await locateMe(); if (me) setPlace(which, { name: '현재 위치', lat: me.lat, lng: me.lng });
+      } },
+      { label: '집', sub: home ? home.name : '설정에서 집 주소를 저장하세요', icon: 'home', run: async () => {
+        const hm = await resolveHome(); if (hm) setPlace(which, { ...hm, name: '집' });
+      } },
+    ];
+  }
+  function renderSuggest(el, entries, onPick) {
+    el.replaceChildren(...entries.map((e) => h('li', { role: 'option' },
+      h('button', { type: 'button', onclick: () => onPick(e) },
+        e.icon ? icon(e.icon, 'ic s-quick') : null,
+        h('span', null, h('span', { class: 's-name' }, e.label || e.name), h('span', { class: 's-addr' }, e.sub || e.address || '')),
+      ))));
+    el.hidden = entries.length === 0;
+  }
+  function showQuick(which) {
+    renderSuggest(suggests[which], quickItems(which), async (e) => { hideSuggest(suggests[which]); await e.run(); focusNext(which); });
+  }
+  function focusNext(which) {
+    if (which === 'start' && !state.end) inputs.end.focus();
+    else inputs[which].blur();
+  }
+  const runSuggest = debounce(async (which, q) => {
+    const seq = ++suggestSeq[which];
+    let results = [];
+    try { results = await searchPlaces(q); } catch { return; }
+    if (seq !== suggestSeq[which] || inputs[which].value.trim() !== q) return;
+    renderSuggest(suggests[which], results, (p) => { setPlace(which, p); hideSuggest(suggests[which]); focusNext(which); });
+  }, 280);
+  for (const which of ['start', 'end']) {
+    const input = inputs[which];
+    input.addEventListener('focus', () => { if (!input.value.trim()) showQuick(which); });
+    input.addEventListener('input', () => {
+      if (state[which] && input.value !== state[which].name) state[which] = null;
+      const q = input.value.trim();
+      if (!q) { suggestSeq[which]++; showQuick(which); return; }
+      runSuggest(which, q);
     });
+    input.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideSuggest(suggests[which]); });
+  }
+  document.addEventListener('pointerdown', (e) => { if (!e.target.closest('.field, .set-input')) hideAllSuggest(); });
+  $('#swapBtn').addEventListener('click', () => {
+    const s = state.start, sv = inputs.start.value;
+    state.start = state.end; inputs.start.value = inputs.end.value;
+    state.end = s; inputs.end.value = sv;
+  });
 
-    // FAB 메뉴 토글 함수
-    function toggleFab() { document.getElementById('fab-container').classList.toggle('open'); }
+  /* ── 장소 고르기 시트 ─────────────────────────────────── */
+  function pickPlace(title, sub, places) {
+    return new Promise((resolve) => {
+      const dlg = $('#pickSheet');
+      $('#pickTitle').textContent = title; $('#pickSub').textContent = sub;
+      let chosen = null;
+      $('#pickList').replaceChildren(...places.map(p => h('li', null, h('button', { type: 'button', onclick: () => { chosen = p; dlg.close(); } },
+        h('span', { class: 's-name' }, p.name), h('span', { class: 's-addr' }, p.address || '')))));
+      dlg.addEventListener('close', () => resolve(chosen), { once: true });
+      dlg.showModal();
+    });
+  }
+  async function resolvePlace(which) {
+    const label = which === 'start' ? '출발지' : '도착지';
+    const text = inputs[which].value.trim();
+    if (!text) { toast(`${label}를 입력해 주세요.`); inputs[which].focus(); return null; }
+    if (state[which] && state[which].name === text) return state[which];
+    let results;
+    try { results = await searchPlaces(text); } catch (e) { toast(apiErrorText(e)); return null; }
+    if (!results.length) { toast(`'${text}'을(를) 찾지 못했어요. 다른 이름으로 검색해 보세요.`); inputs[which].focus(); return null; }
+    const exact = results.filter(r => r.name === text);
+    const pick = results.length === 1 ? results[0] : exact.length === 1 ? exact[0] : await pickPlace(`${label} 고르기`, `'${text}' 검색 결과`, results);
+    if (!pick) return null;
+    setPlace(which, pick); return pick;
+  }
 
-    function openSettings() { document.getElementById('settingsOverlay').classList.add('active'); }
-    function closeSettings() { document.getElementById('settingsOverlay').classList.remove('active'); }
-    function handleSettingsClick(e) { if (e.target.id === 'settingsOverlay') closeSettings(); }
-
-    function applyThemeAndSave() {
-      const mode = document.getElementById('darkConfig').value;
-      document.getElementById('timeSettingBox').style.display = (mode === 'AUTO') ? 'flex' : 'none';
-      localStorage.setItem('pref_theme_mode', mode); localStorage.setItem('pref_dark_start', document.getElementById('darkStartTime').value); localStorage.setItem('pref_dark_end', document.getElementById('darkEndTime').value);
-      checkAutoTheme();
-    }
-
-    function checkAutoTheme() {
-      const mode = localStorage.getItem('pref_theme_mode') || 'LIGHT';
-      if (mode === 'DARK') { document.body.classList.add('dark-theme'); document.body.classList.remove('light-theme'); } 
-      else if (mode === 'LIGHT') { document.body.classList.add('light-theme'); document.body.classList.remove('dark-theme'); } 
-      else if (mode === 'AUTO') {
-        const start = localStorage.getItem('pref_dark_start') || '18:00'; const end = localStorage.getItem('pref_dark_end') || '06:00';
-        const now = new Date(); const timeStr = now.getHours().toString().padStart(2,'0') + ":" + now.getMinutes().toString().padStart(2,'0');
-        let isNight = (start < end) ? (timeStr >= start && timeStr < end) : (timeStr >= start || timeStr < end);
-        if (isNight) { document.body.classList.add('dark-theme'); document.body.classList.remove('light-theme'); } 
-        else { document.body.classList.add('light-theme'); document.body.classList.remove('dark-theme'); }
-      }
-    }
-
-    function saveSettingsBtn() {
-      localStorage.setItem('pref_fuel', document.getElementById('fuelSelect').value); localStorage.setItem('pref_home', document.getElementById('homeInput').value.trim()); localStorage.setItem('pref_food', document.getElementById('foodInput').value.trim());
-      applyThemeAndSave();
-      if (foundRoutes.length > 0) {
-        const activeBtn = document.querySelector('.route-tab-btn.active');
-        if (activeBtn) selectActiveRoute(Array.from(activeBtn.parentNode.children).indexOf(activeBtn));
-      }
-      alert('설정이 안전하게 저장되었습니다.');
-    }
-
-    function loadSettings() {
-      document.getElementById('fuelSelect').value = localStorage.getItem('pref_fuel') || 'ALL'; document.getElementById('homeInput').value = localStorage.getItem('pref_home') || ''; document.getElementById('foodInput').value = localStorage.getItem('pref_food') || '';
-      const mode = localStorage.getItem('pref_theme_mode') || 'LIGHT';
-      document.getElementById('darkConfig').value = mode; document.getElementById('darkStartTime').value = localStorage.getItem('pref_dark_start') || '18:00'; document.getElementById('darkEndTime').value = localStorage.getItem('pref_dark_end') || '06:00';
-      document.getElementById('timeSettingBox').style.display = (mode === 'AUTO') ? 'flex' : 'none'; checkAutoTheme();
-    }
-
-    function forceAppUpdate() {
-      if ('caches' in window) { caches.keys().then(names => names.forEach(name => caches.delete(name))); }
-      if ('serviceWorker' in navigator) { navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update())); }
-      alert('최신 버전으로 업데이트합니다.'); window.location.href = window.location.pathname + '?v=' + new Date().getTime();
-    }
-    
-    async function setHomeAs(type) {
-      document.getElementById('homeActionOverlay').classList.remove('active');
-      const homeAddr = localStorage.getItem('pref_home');
-      if (!homeAddr) return alert('설정에서 내 집 주소를 먼저 저장해주세요.');
-      statusBadge.textContent = '집 주소 좌표 변환 중...'; statusBadge.style.display = 'block';
-      const results = await searchPlaces(homeAddr);
-      statusBadge.style.display = 'none';
-      if (results.length === 0) return alert("집 주소의 정확한 위치를 찾을 수 없습니다. 설정에서 주소를 정확히 입력해주세요.");
-      if (type === 'start') { searchStartCoord = results[0]; document.getElementById('startInput').value = homeAddr; lastConfirmedStartText = homeAddr; } 
-      else { searchEndCoord = results[0]; document.getElementById('endInput').value = homeAddr; lastConfirmedEndText = homeAddr; }
-    }
-
-    function setCurrentLocationAs(type) {
-      if (!currentUserLatLng) return alert("현재 위치를 아직 파악하지 못했습니다. 잠시 후 다시 시도해주세요.");
-      const locName = "현위치"; const coord = { name: locName, lat: currentUserLatLng[0], lng: currentUserLatLng[1] };
-      if (type === 'start') { searchStartCoord = coord; document.getElementById('startInput').value = locName; lastConfirmedStartText = locName; } 
-      else { searchEndCoord = coord; document.getElementById('endInput').value = locName; lastConfirmedEndText = locName; }
-    }
-
-    function initUserLocation() {
-      if (!navigator.geolocation) return;
-      if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-      watchId = navigator.geolocation.watchPosition(
-        (pos) => {
-          currentUserLatLng = [pos.coords.latitude, pos.coords.longitude];
-          renderUserMarker(currentUserLatLng, pos.coords.accuracy);
-          if (!map._userMoved) { map.setView(currentUserLatLng, 15); map._userMoved = true; }
-        }, (err) => {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
-      );
-    }
-
-    function renderUserMarker(latLng, accuracy = 50) {
-      userLocationLayer.clearLayers();
-      L.circleMarker(latLng, { radius: 8, fillColor: '#2563eb', color: '#ffffff', weight: 3, opacity: 1, fillOpacity: 1 }).addTo(userLocationLayer).bindTooltip("내 위치", { permanent: true, direction: "bottom", offset: [0, 6] });
-      L.circle(latLng, { radius: Math.min(accuracy, 200), color: '#38bdf8', weight: 1, fillColor: '#38bdf8', fillOpacity: 0.15 }).addTo(userLocationLayer);
-    }
-    
-    function goToCurrentLocation() { if (currentUserLatLng) { map.setView(currentUserLatLng, 15); } else { initUserLocation(); } }
-
-    let startTimeout, endTimeout, homeTimeout;
-    const startInput = document.getElementById('startInput'); const endInput = document.getElementById('endInput'); const homeInput = document.getElementById('homeInput');
-    const startDropdown = document.getElementById('startDropdown'); const endDropdown = document.getElementById('endDropdown'); const homeDropdown = document.getElementById('homeDropdown');
-
-    [startInput, endInput].forEach(input => {
-      input.addEventListener('focus', () => {
-        const bar = document.getElementById('routeSelectorBar');
-        if (bar.style.display !== 'none') bar.dataset.wasVisible = 'true';
-        bar.style.display = 'none';
+  /* ── 경로 찾기 ────────────────────────────────────────── */
+  const ROUTE_SPECS = [
+    { label: '추천', kind: 'main', params: { priority: 'RECOMMEND' } },
+    { label: '최단시간', kind: 'main', params: { priority: 'TIME' } },
+    { label: '최단거리', kind: 'main', params: { priority: 'DISTANCE' } },
+    { label: '무료도로', kind: 'free', params: { priority: 'RECOMMEND', avoid: 'toll' } },
+  ];
+  function parseRoute(data, spec) {
+    const r = data && data.routes && data.routes[0];
+    if (!r || r.result_code !== 0 || !r.sections) return null;
+    const coords = [];
+    for (const sec of r.sections) for (const road of sec.roads) for (let i = 0; i < road.vertexes.length; i += 2) coords.push([road.vertexes[i + 1], road.vertexes[i]]);
+    if (coords.length < 2) return null;
+    return { ...spec, duration: r.summary.duration, distance: r.summary.distance, toll: (r.summary.fare && r.summary.fare.toll) || 0, coords };
+  }
+  async function findRoutes(ev) {
+    if (ev) ev.preventDefault();
+    hideAllSuggest();
+    const btn = $('#submitBtn');
+    if (btn.getAttribute('aria-busy') === 'true') return;
+    btn.setAttribute('aria-busy', 'true');
+    const run = ++state.run;
+    try {
+      const s = await resolvePlace('start'); if (!s || run !== state.run) return;
+      const e = await resolvePlace('end'); if (!e || run !== state.run) return;
+      if (Math.abs(s.lat - e.lat) < 1e-5 && Math.abs(s.lng - e.lng) < 1e-5) { toast('출발지와 도착지가 같아요.'); return; }
+      renderLoading();
+      const base = { origin: `${s.lng},${s.lat}`, destination: `${e.lng},${e.lat}` };
+      const settled = await Promise.allSettled(ROUTE_SPECS.map(sp => kakaoDirections({ ...base, ...sp.params })));
+      if (run !== state.run) return;
+      const routes = [];
+      settled.forEach((x, i) => {
+        if (x.status !== 'fulfilled') return;
+        const r = parseRoute(x.value, ROUTE_SPECS[i]); if (!r) return;
+        if (routes.some(o => Math.abs(o.distance - r.distance) < 200 && Math.abs(o.duration - r.duration) < 60)) return;
+        routes.push(r);
       });
+      if (!routes.length) {
+        const failed = settled.find(x => x.status === 'rejected');
+        clearRoute(); renderEmpty();
+        toast(failed ? apiErrorText(failed.reason) : '이 구간은 자동차 경로를 찾지 못했어요.');
+        return;
+      }
+      state.routes = routes;
+      document.body.classList.add('has-route'); document.body.classList.remove('editing');
+      $('#summaryText').textContent = `${s.name} → ${e.name}`;
+      selectRoute(0);
+      setTimeout(() => { map.invalidateSize(); drawRoutes(); }, 80);
+    } finally {
+      btn.removeAttribute('aria-busy');
+    }
+  }
+  $('#routeForm').addEventListener('submit', findRoutes);
+  $('#summaryBtn').addEventListener('click', () => { document.body.classList.add('editing'); setTimeout(() => { map.invalidateSize(); inputs.end.focus(); }, 30); });
+
+  function clearRoute() {
+    state.routes = []; state.active = -1; state.items = []; state.geo = null; state.activeKey = null;
+    Object.entries(layers).forEach(([k, l]) => { if (k !== 'me') l.clearLayers(); });
+    markerByKey.clear(); setLegend(null);
+  }
+
+  function renderTabs() {
+    $('#routeTabs').replaceChildren(...state.routes.map((r, i) => h('button', {
+      class: 'tab', type: 'button', 'data-kind': r.kind, 'aria-pressed': String(i === state.active),
+      onclick: () => { if (i !== state.active) selectRoute(i); },
+    }, h('b', null, r.label), h('span', { class: 'num' }, fmtDuration(r.duration)), h('span', { class: 'num' }, r.toll ? fmtWon(r.toll) : '통행료 무료'))));
+  }
+
+  function drawRoutes() {
+    layers.routes.clearLayers(); layers.arrows.clearLayers(); layers.ends.clearLayers();
+    const r = state.routes[state.active]; if (!r) return;
+    const cs = getComputedStyle(document.documentElement);
+    const other = cs.getPropertyValue('--route-other').trim(), paper = cs.getPropertyValue('--paper').trim();
+    state.routes.forEach((o, i) => {
+      if (i === state.active) return;
+      L.polyline(o.coords, { color: other, weight: 4, opacity: .8, dashArray: '2 8', lineCap: 'round' })
+        .on('click', () => selectRoute(i)).addTo(layers.routes);
+    });
+    const color = r.kind === 'free' ? '#E2701F' : '#0E7A55';
+    L.polyline(r.coords, { color: paper, weight: 11, opacity: 1, interactive: false }).addTo(layers.routes);
+    const line = L.polyline(r.coords, { color, weight: 6, opacity: 1, interactive: false }).addTo(layers.routes);
+    if (L.polylineDecorator) {
+      L.polylineDecorator(line, { patterns: [{ offset: 60, repeat: 140, symbol: L.Symbol.arrowHead({ pixelSize: 8, polygon: false, pathOptions: { stroke: true, weight: 2, color: '#fff', opacity: .95 } }) }] }).addTo(layers.arrows);
+    }
+    const g = buildGeo(r.coords);
+    for (let k = 50, i = 0; k < g.total - 10; k += 50) {
+      while (i < g.cum.length - 1 && g.cum[i + 1] < k) i++;
+      L.marker(r.coords[i], { icon: L.divIcon({ className: '', html: `<div class="km-tick${k % 100 ? '' : ' km-100'}">${k}</div>`, iconSize: [0, 0] }), interactive: false, keyboard: false, zIndexOffset: -1000 }).addTo(layers.ends);
+    }
+    L.marker(r.coords[0], { icon: dot('mk-start', 16), interactive: false }).addTo(layers.ends);
+    L.marker(r.coords[r.coords.length - 1], { icon: dot('mk-end', 16), interactive: false }).addTo(layers.ends);
+    map.fitBounds(line.getBounds(), { padding: [28, 28] });
+  }
+
+  /* ── 경로 위 항목 모으기 ──────────────────────────────── */
+  function restItems(g) {
+    const out = [];
+    for (const a of state.areas) {
+      const lat = +a.lat, lng = +a.lng;
+      if (!Number.isFinite(lat) || !Number.isFinite(lng) || !inBox(g, lat, lng)) continue;
+      const p = project(g, lat, lng);
+      if (p.dist > CONFIG.REST_MAX_KM) continue;
+      const both = /양방향|통합/.test(a.direction || '') || /\(통합\)/.test(a.name || '');
+      if (!both && !p.right) continue;
+      out.push({ kind: 'rest', key: 'r:' + a.name, a, lat, lng, km: p.km });
+    }
+    return out;
+  }
+  function reportFail(fail, total, what) {
+    if (!fail.n) return;
+    if (fail.n === total) toast(`${what}를 찾지 못했어요. ${apiErrorText(fail.err)}`, 5000);
+    else toast(`일부 구간의 ${what} 검색이 실패했어요. 목록이 빠질 수 있어요.`, 4000);
+  }
+  async function drowsyItems(route, g) {
+    const pts = samplePoints(route.coords, g, 5, 60);   // 반경 3km 원이 경로를 빈틈없이 덮도록
+    const fail = { n: 0, err: null };
+    const res = await pool(pts, 6, pt => kakaoLocal('keyword', { query: '졸음쉼터', y: pt[0], x: pt[1], radius: 3000, size: 15 }).then(d => d.documents || []).catch(e => { fail.n++; fail.err = e; return []; }));
+    reportFail(fail, pts.length, '졸음쉼터');
+    const seen = new Set(), out = [];
+    for (const d of res.flat()) {
+      if (seen.has(d.id) || !d.place_name.includes('졸음쉼터')) continue; seen.add(d.id);
+      const lat = +d.y, lng = +d.x, p = project(g, lat, lng);
+      if (p.dist > CONFIG.DROWSY_MAX_KM || !p.right) continue;
+      if (out.some(o => Math.abs(o.km - p.km) < 0.3)) continue;   // 같은 쉼터가 이름만 달리 두 번 등록된 경우
+      out.push({ kind: 'drowsy', key: 'd:' + d.id, d, lat, lng, km: p.km });
+    }
+    return out;
+  }
+  async function gasItems(route, g) {
+    const pts = samplePoints(route.coords, g, 3.5, 70);  // 반경 2km 원이 경로를 덮도록
+    const fail = { n: 0, err: null };
+    const res = await pool(pts, 6, pt => kakaoLocal('category', { category_group_code: 'OL7', y: pt[0], x: pt[1], radius: 2000, size: 15 }).then(d => d.documents || []).catch(e => { fail.n++; fail.err = e; return []; }));
+    reportFail(fail, pts.length, '주유소');
+    const seen = new Set(), out = [];
+    for (const d of res.flat()) {
+      if (seen.has(d.id)) continue; seen.add(d.id);
+      const lat = +d.y, lng = +d.x, p = project(g, lat, lng);
+      if (p.dist > CONFIG.GAS_MAX_KM) continue;
+      out.push({ kind: 'gas', key: 'g:' + d.id, d, lat, lng, km: p.km, dist: p.dist });
+    }
+    // 8km 구간마다 도로에 가장 붙은 한 곳만 남긴다(도심 출발 구간에 수십 곳이 몰리는 것을 막음)
+    const best = new Map();
+    for (const it of out) { const b = Math.floor(it.km / 8); if (!best.has(b) || it.dist < best.get(b).dist) best.set(b, it); }
+    return [...best.values()];
+  }
+
+  async function selectRoute(i) {
+    if (!state.routes[i]) return;
+    state.active = i; state.activeKey = null; state.enterAnim = true;
+    const run = ++state.run;
+    renderTabs(); drawRoutes();
+    const route = state.routes[i];
+    const g = state.geo = buildGeo(route.coords);
+    state.items = route.kind === 'free' ? [] : (state.dataReady ? restItems(g) : []);
+    const wantExtras = route.kind === 'free' || state.showDrowsy;
+    state.extrasLoading = wantExtras;
+    renderIndex();
+    if (!wantExtras) return;
+    const extras = route.kind === 'free' ? await gasItems(route, g) : await drowsyItems(route, g);
+    if (run !== state.run) return;
+    state.items = state.items.concat(extras);
+    state.extrasLoading = false;
+    renderIndex();
+  }
+
+  /* ── 색인표 그리기 ────────────────────────────────────── */
+  function passesFuel(a) {
+    if (state.fuel === 'GAS') return !!a.has_gas;
+    if (state.fuel === 'LPG') return !!a.has_lpg;
+    if (state.fuel === 'EV') return !!a.has_ev || !!(a.ev_detail && a.ev_detail.count);
+    return true;
+  }
+  function favFood(a) {
+    const pref = (store.get('pref_food', '') || '').trim();
+    if (!pref || !a.menu_list) return null;
+    const hit = a.menu_list.find(m => m.name && m.name.includes(pref));
+    return hit ? hit.name : null;
+  }
+  function etaText(km) {
+    const r = state.routes[state.active];
+    if (!r || !state.geo || !state.geo.total) return '';
+    const min = Math.round(r.duration * (km / state.geo.total) / 60);
+    return min < 60 ? `약 ${min}분 뒤` : `약 ${Math.floor(min / 60)}시간 ${min % 60}분 뒤`;
+  }
+
+  function rowFor(it, n) {
+    let sym, name, sub; const facts = [];
+    if (it.kind === 'rest') {
+      const a = it.a, { base, toward } = splitName(a.name);
+      sym = h('span', { class: 'sym num', 'aria-hidden': 'true' }, n);
+      name = base;
+      sub = [a.route_name, toward ? `${toward} 방향` : '양방향'].filter(Boolean).join(' · ');
+      const gas = parsePrice(a.gas_price), diesel = parsePrice(a.diesel_price);
+      if (gas) facts.push(h('span', { class: 'fact num' }, '휘발유 ', h('b', null, gas.toLocaleString('ko-KR'))));
+      if (diesel) facts.push(h('span', { class: 'fact num' }, '경유 ', h('b', null, diesel.toLocaleString('ko-KR'))));
+      if (a.has_lpg) facts.push(h('span', { class: 'fact' }, icon('flame'), 'LPG'));
+      const evCount = a.ev_detail && a.ev_detail.count;
+      if (evCount || a.has_ev) facts.push(h('span', { class: 'fact' }, icon('plug'), evCount ? `충전기 ${evCount}` : '충전'));
+      if (a.has_nursing) facts.push(h('span', { class: 'fact' }, icon('bottle'), '수유실'));
+      const fav = favFood(a);
+      if (fav) facts.push(h('span', { class: 'fact fact-fav' }, icon('star'), fav));
+    } else if (it.kind === 'drowsy') {
+      sym = h('span', { class: 'sym sym-drowsy', 'aria-hidden': 'true' });
+      name = it.d.place_name; sub = '졸음쉼터 · 잠깐 눈 붙이는 곳';
+    } else {
+      sym = h('span', { class: 'sym sym-gas', 'aria-hidden': 'true' }, icon('fuel', 'ic ic-sm'));
+      name = it.d.place_name; sub = it.d.road_address_name || it.d.address_name || '주유소';
+    }
+    return h('li', null, h('button', {
+      type: 'button', class: 'row' + (it.key === state.activeKey ? ' is-active' : ''), 'data-key': it.key, onclick: () => openItem(it),
+    },
+      sym,
+      h('span', null, h('span', { class: 'row-name' }, name), h('span', { class: 'row-sub' }, sub), facts.length ? h('span', { class: 'row-facts' }, facts) : null),
+      h('span', { class: 'row-dist num' }, h('b', null, Math.round(it.km)), h('small', null, 'km'), h('span', { class: 'eta' }, etaText(it.km))),
+    ));
+  }
+
+  function markerFor(it, n) {
+    let html, size;
+    if (it.kind === 'rest') {
+      html = `<div class="mk mk-rest${favFood(it.a) ? ' mk-fav' : ''}${it.key === state.activeKey ? ' is-active' : ''}">${n}</div>`; size = 26;
+    } else if (it.kind === 'drowsy') { html = '<div class="mk mk-drowsy"></div>'; size = 16; }
+    else { html = '<div class="mk mk-gas"></div>'; size = 18; }
+    const m = L.marker([it.lat, it.lng], {
+      icon: L.divIcon({ className: 'mk-wrap', html, iconSize: [size, size], iconAnchor: [size / 2, size / 2] }),
+      title: it.kind === 'rest' ? splitName(it.a.name).base : it.d.place_name,
+      zIndexOffset: it.key === state.activeKey ? 2000 : it.kind === 'rest' ? 500 : 0,
+    });
+    m.on('click', () => { openItem(it); scrollRowIntoView(it.key); });
+    return m;
+  }
+
+  function visibleItems() {
+    return state.items
+      .filter(it => it.kind !== 'rest' || passesFuel(it.a))
+      .filter(it => it.kind !== 'drowsy' || state.showDrowsy)
+      .sort((x, y) => x.km - y.km);
+  }
+
+  function renderIndex() {
+    const box = $('#indexContent');
+    const route = state.routes[state.active]; if (!route) return;
+    const items = visibleItems();
+    layers.items.clearLayers(); markerByKey.clear();
+    let n = 0;
+    const rows = items.map(it => {
+      const num = it.kind === 'rest' ? ++n : null;
+      markerByKey.set(it.key, markerFor(it, num).addTo(layers.items));
+      return rowFor(it, num);
     });
 
-    startInput.addEventListener('input', (e) => handleAutocomplete(e.target.value, startDropdown, 'start'));
-    endInput.addEventListener('input', (e) => handleAutocomplete(e.target.value, endDropdown, 'end'));
-    homeInput.addEventListener('input', (e) => handleAutocomplete(e.target.value, homeDropdown, 'home'));
+    const isFree = route.kind === 'free';
+    const count = (k) => items.filter(i => i.kind === k).length;
+    const title = isFree
+      ? [h('strong', null, `주유소 ${count('gas')}곳`), ' · 무료도로 주변']
+      : [h('strong', null, `휴게소 ${count('rest')}곳`), state.showDrowsy ? ` · 졸음쉼터 ${count('drowsy')}곳` : '', ' · 내 방향'];
+    if (state.extrasLoading) title.push(' · 찾는 중…');
+    const large = document.body.classList.contains('list-large');
 
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('.input-wrapper')) {
-        startDropdown.style.display = 'none'; endDropdown.style.display = 'none'; homeDropdown.style.display = 'none';
-        const bar = document.getElementById('routeSelectorBar');
-        if (bar.dataset.wasVisible === 'true' && foundRoutes.length > 0) { bar.style.display = 'flex'; bar.dataset.wasVisible = 'false'; }
-      }
-    });
+    const head = h('div', { class: 'index-head' },
+      h('div', null,
+        h('p', { class: 'index-title', 'aria-live': 'polite' }, title),
+        h('p', { class: 'index-sub' }, isFree ? '오피넷 가격은 눌러서 확인해요' : '진행 방향 오른쪽만 · 유가는 수집 시점 값')),
+      h('button', { class: 'text-btn list-toggle', type: 'button', onclick: toggleListSize }, icon(large ? 'expand' : 'list', 'ic ic-sm'), large ? '지도 크게' : '목록 크게'),
+    );
+    const chips = isFree ? null : h('div', { class: 'chips', role: 'group', 'aria-label': '연료·표시 거르기' },
+      [['ALL', '전체'], ['GAS', '주유소'], ['LPG', 'LPG'], ['EV', '전기차 충전']].map(([v, label]) =>
+        h('button', { class: 'chip', type: 'button', 'aria-pressed': String(state.fuel === v), onclick: () => { state.fuel = v; store.set('pref_fuel', v); renderIndex(); } }, label)),
+      h('span', { class: 'chip-sep', 'aria-hidden': 'true' }),
+      h('button', { class: 'chip chip-layer', type: 'button', 'aria-pressed': String(state.showDrowsy), onclick: toggleDrowsy }, '졸음쉼터'),
+    );
 
-    async function handleAutocomplete(keyword, dropdown, type) {
-      let activeTimeout = (type === 'start') ? startTimeout : (type === 'end') ? endTimeout : homeTimeout;
-      clearTimeout(activeTimeout);
-      dropdown.style.display = 'none';
-      if (!keyword.trim()) return;
+    let body;
+    if (!rows.length && state.extrasLoading) body = [h('div', { class: 'skel' }), h('div', { class: 'skel' }), h('div', { class: 'skel' })];
+    else if (!rows.length) {
+      const msg = isFree ? '이 무료도로 주변에서 주유소를 찾지 못했어요.'
+        : !state.dataReady ? '휴게소 데이터를 아직 불러오지 못했어요.'
+        : state.fuel !== 'ALL' ? '조건에 맞는 휴게소가 없어요. 위에서 \'전체\'를 눌러 보세요.'
+        : '이 경로에는 고속도로 휴게소가 없어요. 국도 위주 경로일 수 있어요.';
+      body = h('div', { class: 'empty' }, h('p', null, msg));
+    } else {
+      rows.forEach((li, i) => li.style.setProperty('--i', i));
+      body = h('ul', { class: 'list' + (state.enterAnim && !state.extrasLoading ? ' enter' : '') }, rows);
+      if (!state.extrasLoading) state.enterAnim = false;
+    }
+    box.className = 'flow';
+    setLegend(isFree ? 'free' : 'main');
+    box.replaceChildren(...[head, chips].concat(body).filter(Boolean));
+  }
 
-      const timeoutId = setTimeout(async () => {
-        const results = await searchPlaces(keyword);
-        if (results.length > 0) {
-          dropdown.innerHTML = results.map((r, i) => `<li onclick="selectAutocompleteItem('${type}', ${i})"><div class="ac-title">${r.name}</div><div class="ac-addr">${r.address || '주소 없음'}</div></li>`).join('');
-          if (type === 'start') window.tempStartResults = results; else if (type === 'end') window.tempEndResults = results; else window.tempHomeResults = results;
-          dropdown.style.display = 'block';
-        }
-      }, 400);
-      if (type === 'start') startTimeout = timeoutId; else if (type === 'end') endTimeout = timeoutId; else homeTimeout = timeoutId;
+  function toggleListSize() { document.body.classList.toggle('list-large'); renderIndex(); setTimeout(() => map.invalidateSize(), 60); }
+  function toggleDrowsy() {
+    state.showDrowsy = !state.showDrowsy; store.set('pref_show_drowsy', state.showDrowsy ? '1' : '0');
+    const route = state.routes[state.active];
+    if (state.showDrowsy && route && route.kind !== 'free' && !state.items.some(i => i.kind === 'drowsy')) selectRoute(state.active);
+    else renderIndex();
+  }
+  function scrollRowIntoView(key) {
+    const el = document.querySelector(`.row[data-key="${CSS.escape(key)}"]`);
+    if (el) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+  function setActive(key) {
+    state.activeKey = key;
+    document.querySelectorAll('.row').forEach(r => r.classList.toggle('is-active', r.dataset.key === key));
+    document.querySelectorAll('.mk-rest.is-active').forEach(m => m.classList.remove('is-active'));
+    markerByKey.forEach((m, k) => m.setZIndexOffset(k === key ? 2000 : (k.startsWith('r:') ? 500 : 0)));
+    const mk = markerByKey.get(key), el = mk && mk.getElement();
+    const d = el && el.querySelector('.mk-rest'); if (d) d.classList.add('is-active');
+  }
+
+  function renderEmpty() {
+    document.body.classList.remove('has-route', 'list-large', 'editing');
+    $('#routeTabs').replaceChildren();
+    const home = getHome(), box = $('#indexContent');
+    box.className = '';
+    box.replaceChildren(h('div', { class: 'empty' },
+      h('h2', null, '어디로 가세요?'),
+      h('p', null, '경로를 찾으면 내 진행 방향 휴게소만 거리순으로 여기에 적어 드려요.'),
+      h('div', { class: 'quick' },
+        h('button', { class: 'chip', type: 'button', onclick: async () => { const me = state.me || await locateMe({ center: true }); if (me) { setPlace('start', { name: '현재 위치', lat: me.lat, lng: me.lng }); inputs.end.focus(); } } }, icon('locate', 'ic ic-sm'), '현재 위치에서 출발'),
+        h('button', { class: 'chip', type: 'button', onclick: async () => { const hm = await resolveHome(); if (hm) { setPlace('end', { ...hm, name: '집' }); if (!state.start) inputs.start.focus(); } } }, icon('home', 'ic ic-sm'), home ? '집으로 가기' : '집 주소 저장하기'),
+      ),
+      h('div', { class: 'legend', 'aria-label': '범례' },
+        h('span', null, h('i'), '휴게소'), h('span', null, h('i', { class: 'l-drowsy' }), '졸음쉼터'), h('span', null, h('i', { class: 'l-gas' }), '주유소(무료도로)')),
+    ));
+    setTimeout(() => map.invalidateSize(), 60);
+  }
+  function renderLoading() {
+    const box = $('#indexContent'); box.className = '';
+    box.replaceChildren(h('div', { class: 'index-head' }, h('p', { class: 'index-title' }, '경로를 찾는 중…')), h('div', { class: 'skel' }), h('div', { class: 'skel' }));
+  }
+
+  /* ── 시트 ─────────────────────────────────────────────── */
+  const wide = matchMedia('(min-width: 900px)');
+  function openSheet(id) {
+    const d = document.getElementById(id);
+    if (d.open) return;
+    if (id === 'detailSheet' && wide.matches) d.show(); else d.showModal();
+    history.pushState({ sheet: id }, '');
+  }
+  document.querySelectorAll('dialog.sheet').forEach(d => {
+    d.addEventListener('click', (e) => { if (e.target === d || e.target.closest('[data-close]')) d.close(); });
+    d.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !d.matches(':modal')) d.close(); });
+    // 시트를 닫으면 열 때 쌓은 기록도 되돌린다(뒤로 가기가 앱을 떠나지 않게)
+    d.addEventListener('close', () => { if (history.state && history.state.sheet === d.id) history.back(); });
+  });
+  window.addEventListener('popstate', () => {
+    document.querySelectorAll('dialog.sheet[open]').forEach(d => { if (!(history.state && history.state.sheet === d.id)) d.close(); });
+  });
+
+  function openItem(it) {
+    setActive(it.key);
+    map.panTo([it.lat, it.lng], { animate: true });
+    if (it.kind === 'rest') openRest(it.a, it);
+    else if (it.kind === 'gas') openGas(it.d, it);
+    else {
+      const mk = markerByKey.get(it.key);
+      if (mk) mk.bindPopup(`${escapeHtml(it.d.place_name)}<br><span style="font-weight:500">출발 후 ${Math.round(it.km)}km</span>`).openPopup();
+    }
+  }
+
+  function fuelCell(label, value, off) {
+    return h('div', { class: 'fuel-cell' }, h('div', { class: 'k' }, label), h('div', { class: 'v num' + (off ? ' off' : '') }, value));
+  }
+  function priceOr(v, has, yes) { const p = parsePrice(v); return p ? [fmtWon(p), false] : has ? [yes, true] : ['없음', true]; }
+  function categorize(list) {
+    const cats = { '전체': list, '밥·국': [], '면': [], '돈가스': [], '간식': [] };
+    for (const m of list) {
+      const n = m.name || '';
+      if (/우동|라면|국수|면|짬뽕|짜장/.test(n)) cats['면'].push(m);
+      else if (/가스|카츠/.test(n)) cats['돈가스'].push(m);
+      else if (/밥|탕|국|찌개|정식/.test(n)) cats['밥·국'].push(m);
+      else cats['간식'].push(m);
+    }
+    return Object.entries(cats).filter(([, v]) => v.length);
+  }
+
+  function openRest(a, it) {
+    const { base, toward } = splitName(a.name);
+    $('#detailTitle').textContent = base + ' 휴게소';
+    $('#detailSub').textContent = [a.route_name, toward ? `${toward} 방향` : '양방향', it ? `출발 후 ${Math.round(it.km)}km` : null].filter(Boolean).join(' · ');
+    const usage = $('#detailUsage');
+    usage.hidden = !USAGE_LABEL[a.crowded_level]; usage.textContent = USAGE_LABEL[a.crowded_level] || '';
+
+    const [gv, goff] = priceOr(a.gas_price, a.has_gas, '가격 정보 없음');
+    const [dv, doff] = priceOr(a.diesel_price, a.has_gas, '가격 정보 없음');
+    const [lv, loff] = priceOr(a.lpg_price, a.has_lpg, '충전 가능');
+    const ev = a.ev_detail;
+    const evText = ev && ev.count ? `${ev.count}기` : a.has_ev ? '운영' : '없음';
+    const secs = [];
+
+    secs.push(h('section', { class: 'sec' },
+      h('h3', null, icon('fuel', 'ic ic-sm'), '연료'),
+      h('div', { class: 'fuel-table' }, fuelCell('휘발유', gv, goff), fuelCell('경유', dv, doff), fuelCell('LPG', lv, loff), fuelCell('전기차 충전기', evText, !(ev && ev.count) && !a.has_ev)),
+      ev && ev.count ? h('p', { class: 'ev-line' },
+        h('b', null, (ev.operators || []).join(', ') || '운영사 미상'), (ev.outputs || []).length ? ' · ' + ev.outputs.join(', ') : '',
+        h('br'), '참고 단가 ', EV_RATES[(ev.operators || [])[0]] || '약 340~350원/kWh (운영사별 상이)') : null,
+    ));
+
+    const amen = [
+      a.has_nursing ? h('span', null, icon('bottle', 'ic ic-sm'), '수유실 있음') : h('span', { class: 'off' }, '수유실 없음'),
+      a.has_pharmacy ? h('span', null, icon('pill', 'ic ic-sm'), '약국 있음') : h('span', { class: 'off' }, '약국 없음'),
+    ];
+    if (a.tel) amen.push(h('a', { href: 'tel:' + a.tel.replace(/[^0-9]/g, '') }, icon('phone', 'ic ic-sm'), a.tel));
+    secs.push(h('section', { class: 'sec' }, h('h3', null, '편의시설'), h('div', { class: 'amen' }, amen)));
+
+    const brands = a.brand_list || [];
+    if (brands.length) secs.push(h('section', { class: 'sec' },
+      h('h3', null, icon('cup', 'ic ic-sm'), '입점 매장'),
+      h('ul', { class: 'brand-list' }, brands.map(b => h('li', null,
+        h('span', null, b.name === '기타' && b.desc ? b.desc : b.name, b.name !== '기타' && b.desc ? h('small', null, ' ' + b.desc) : null),
+        h('small', { class: 'num' }, b.hours || '')))),
+    ));
+
+    const menus = a.menu_list || [];
+    if (menus.length) {
+      const cats = categorize(menus), pref = (store.get('pref_food', '') || '').trim();
+      const listEl = h('ul', { class: 'menu-list' });
+      const draw = (items) => listEl.replaceChildren(...items.map(m => h('li', null,
+        h('span', { class: pref && (m.name || '').includes(pref) ? 'fav' : null }, m.name, m.is_best ? h('span', { class: 'best' }, '대표') : null),
+        h('span', { class: 'price num' }, m.price || ''))));
+      const seg = h('div', { class: 'seg', role: 'group', 'aria-label': '메뉴 분류' });
+      cats.forEach(([k, v], i) => seg.append(h('button', { type: 'button', 'aria-pressed': String(i === 0), onclick: (e) => {
+        seg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', 'false'));
+        e.currentTarget.setAttribute('aria-pressed', 'true'); draw(v);
+      } }, `${k} ${v.length}`)));
+      draw(cats[0][1]);
+      secs.push(h('section', { class: 'sec' }, h('h3', null, icon('bowl', 'ic ic-sm'), '메뉴'), seg, listEl));
+    } else if (a.best_food) {
+      secs.push(h('section', { class: 'sec' }, h('h3', null, icon('bowl', 'ic ic-sm'), '대표 메뉴'), h('p', { style: 'margin:0;font-size:14px' }, a.best_food)));
     }
 
-    function selectAutocompleteItem(type, index) {
-      if (type === 'start') {
-        searchStartCoord = window.tempStartResults[index]; startInput.value = searchStartCoord.name; lastConfirmedStartText = searchStartCoord.name; startDropdown.style.display = 'none';
-      } else if (type === 'end') {
-        searchEndCoord = window.tempEndResults[index]; endInput.value = searchEndCoord.name; lastConfirmedEndText = searchEndCoord.name; endDropdown.style.display = 'none';
-      } else if (type === 'home') {
-        const selected = window.tempHomeResults[index]; homeInput.value = selected.name; homeDropdown.style.display = 'none';
-      }
-      const bar = document.getElementById('routeSelectorBar');
-      if (bar.dataset.wasVisible === 'true' && foundRoutes.length > 0) { bar.style.display = 'flex'; bar.dataset.wasVisible = 'false'; }
-    }
+    const pd = a.parking_detail || {};
+    const total = a.parking_count || (pd.small || 0) + (pd.large || 0);
+    secs.push(h('section', { class: 'sec' },
+      h('h3', null, icon('parking', 'ic ic-sm'), total ? `주차 ${total.toLocaleString('ko-KR')}면` : '주차'),
+      h('div', { class: 'kv num' },
+        h('div', null, h('div', { class: 'k' }, '소형'), h('div', { class: 'v' }, pd.small ?? '-')),
+        h('div', null, h('div', { class: 'k' }, '대형'), h('div', { class: 'v' }, pd.large ?? '-')),
+        h('div', null, h('div', { class: 'k' }, '장애인'), h('div', { class: 'v' }, pd.disabled ?? '-'))),
+      h('p', { class: 'foot' }, '유가·이용량·주차면은 데이터 수집 시점 값이에요. 실제와 다를 수 있어요.'),
+    ));
 
-    function swapLocations() {
-      const tempText = startInput.value; startInput.value = endInput.value; endInput.value = tempText;
-      const tempCoord = searchStartCoord; searchStartCoord = searchEndCoord; searchEndCoord = tempCoord;
-      const tempConfirmed = lastConfirmedStartText; lastConfirmedStartText = lastConfirmedEndText; lastConfirmedEndText = tempConfirmed;
-      startDropdown.style.display = 'none'; endDropdown.style.display = 'none';
-    }
+    $('#detailBody').replaceChildren(...secs);
+    $('#detailBody').scrollTop = 0;
+    openSheet('detailSheet');
+  }
 
-    function categorizeMenus(menuList) {
-      const categories = { '전체': menuList, '한식': [], '양식': [], '면류': [], '간식': [] };
-      menuList.forEach(m => {
-        const n = m.name || '';
-        if (n.includes('탕') || n.includes('찌개') || n.includes('밥')) categories['한식'].push(m); else if (n.includes('가스') || n.includes('카츠')) categories['양식'].push(m);
-        else if (n.includes('우동') || n.includes('라면') || n.includes('면')) categories['면류'].push(m); else categories['간식'].push(m);
-      });
-      return categories;
-    }
-    let currentCategories = {};
+  async function openGas(st, it) {
+    $('#detailTitle').textContent = st.place_name;
+    $('#detailSub').textContent = [st.road_address_name || st.address_name, it ? `출발 후 ${Math.round(it.km)}km` : null].filter(Boolean).join(' · ');
+    $('#detailUsage').hidden = true;
+    const gasEl = h('div', { class: 'v num off' }, '조회 중…'), dieselEl = h('div', { class: 'v num off' }, '조회 중…');
+    const contact = st.phone ? h('section', { class: 'sec' }, h('h3', null, '연락처'), h('div', { class: 'amen' }, h('a', { href: 'tel:' + st.phone.replace(/[^0-9]/g, '') }, icon('phone', 'ic ic-sm'), st.phone))) : null;
+    $('#detailBody').replaceChildren(...[
+      h('section', { class: 'sec' }, h('h3', null, icon('fuel', 'ic ic-sm'), '오늘 가격 · 오피넷'),
+        h('div', { class: 'fuel-table' },
+          h('div', { class: 'fuel-cell', style: 'border-bottom:0' }, h('div', { class: 'k' }, '휘발유'), gasEl),
+          h('div', { class: 'fuel-cell', style: 'border-bottom:0' }, h('div', { class: 'k' }, '경유'), dieselEl))),
+      contact,
+    ].filter(Boolean));
+    openSheet('detailSheet');
 
-    function selectCat(catKey, btn) {
-      document.querySelectorAll('.store-tab-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); renderMenuCards(currentCategories[catKey]);
-    }
-    function renderMenuCards(items) { document.getElementById('mMenuGrid').innerHTML = items.map(m => `<div class="food-card"><img src="${defaultImg}" /><div><div class="food-name">${m.name}</div><div class="food-price">${m.price}</div></div></div>`).join(''); }
-    function closeModal() { document.getElementById('modalOverlay').classList.remove('active'); }
-    function handleOverlayClick(e) { if (e.target.id === 'modalOverlay') closeModal(); }
-
-    async function searchPlaces(keyword) {
-      if (!keyword) return [];
-      const cleanKeyword = keyword.trim(); let results = [];
-      if (KAKAO_REST_API_KEY) {
-        try {
-          for (let page = 1; page <= 2; page++) {
-            const kRes = await fetch(`https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(cleanKeyword)}&size=15&page=${page}`, { headers: { 'Authorization': `KakaoAK ${KAKAO_REST_API_KEY}` } });
-            if (!kRes.ok) break;
-            const kData = await kRes.json();
-            if (kData.documents && kData.documents.length > 0) results = results.concat(kData.documents.map(d => ({ name: d.place_name, address: d.road_address_name || d.address_name, lat: parseFloat(d.y), lng: parseFloat(d.x) })));
-            if (!kData.meta || kData.meta.is_end) break;
-          }
-        } catch (e) { }
-      }
-      return results;
-    }
-
-    let placeModalResolve = null;
-    function promptPlaceSelection(titleText, places) {
-      return new Promise((resolve) => {
-        placeModalResolve = resolve; document.getElementById('placeSelectTitle').textContent = titleText;
-        const list = document.getElementById('placeListContainer'); list.innerHTML = '';
-        places.forEach(p => {
-          const item = document.createElement('div'); item.className = 'place-item'; item.innerHTML = `<div class="place-item-title">${p.name}</div><div class="place-item-addr">${p.address || '주소 정보 없음'}</div>`;
-          item.onclick = () => { document.getElementById('placeSelectOverlay').classList.remove('active'); const done = placeModalResolve; placeModalResolve = null; if (done) done(p); };
-          list.appendChild(item);
-        });
-        document.getElementById('placeSelectOverlay').classList.add('active');
-      });
-    }
-    function cancelPlaceSelection() { document.getElementById('placeSelectOverlay').classList.remove('active'); if (placeModalResolve) { const done = placeModalResolve; placeModalResolve = null; done(null); } }
-
-    function getDistance(lat1, lon1, lat2, lon2) {
-      const R = 6371; const dLat = (lat2 - lat1) * Math.PI / 180; const dLon = (lon2 - lon1) * Math.PI / 180;
-      const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    }
-    function distToSegment(p, v, w) {
-      const l2 = (v[0] - w[0]) ** 2 + (v[1] - w[1]) ** 2;
-      if (l2 === 0) return getDistance(p[0], p[1], v[0], v[1]);
-      let t = ((p[0] - v[0]) * (w[0] - v[0]) + (p[1] - v[1]) * (w[1] - v[1])) / l2;
-      t = Math.max(0, Math.min(1, t));
-      const proj = [v[0] + t * (w[0] - v[0]), v[1] + t * (w[1] - v[1])];
-      return getDistance(p[0], p[1], proj[0], proj[1]);
-    }
-    function getSamplePoints(latLngs, intervalKm) {
-      let accumulatedDist = 0; let lastPoint = latLngs[0]; const samplePoints = [lastPoint];
-      for (let i = 1; i < latLngs.length; i++) {
-        const d = getDistance(lastPoint[0], lastPoint[1], latLngs[i][0], latLngs[i][1]);
-        accumulatedDist += d;
-        if (accumulatedDist >= intervalKm) { samplePoints.push(latLngs[i]); accumulatedDist = 0; }
-        lastPoint = latLngs[i];
-      }
-      if (samplePoints.length === 1) samplePoints.push(latLngs[latLngs.length - 1]);
-      return samplePoints;
-    }
-
-    async function handleSearchRoute() {
-      const startText = document.getElementById('startInput').value.trim(); const endText = document.getElementById('endInput'); const textEnd = endText.value.trim();
-      if (!startText || !textEnd) return alert('출발지와 목적지를 모두 입력해 주세요.');
-      
-      startDropdown.style.display = 'none'; endDropdown.style.display = 'none'; closeModal();
-      const btn = document.querySelector('.btn-search'); btn.textContent = '...'; btn.disabled = true;
-
+    const [kx, ky] = proj4('EPSG:4326', 'KATEC', [+st.x, +st.y]);
+    const clean = s => (s || '').replace(/주식회사|\(주\)|㈜|주유소|\s/g, '');
+    const target = clean(st.place_name);
+    const lookup = async (prodcd, el) => {
       try {
-        if (!(searchStartCoord && lastConfirmedStartText === startText)) {
-          const startResults = await searchPlaces(startText);
-          if (startResults.length === 0) { alert(`출발지 '${startText}' 위치를 찾지 못했습니다.`); btn.textContent = '탐색'; btn.disabled = false; return; }
-          if(startResults.length === 1) { searchStartCoord = startResults[0]; } 
-          else { const chosenStart = await promptPlaceSelection(`출발지 선택: ${startText}`, startResults); if (!chosenStart) { btn.textContent = '탐색'; btn.disabled = false; return; } searchStartCoord = chosenStart; }
-          document.getElementById('startInput').value = searchStartCoord.name; lastConfirmedStartText = searchStartCoord.name;
-          await new Promise(r => setTimeout(r, 200));
-        }
+        const data = await opinetAround({ x: Math.round(kx), y: Math.round(ky), radius: 1000, prodcd, sort: 2 });
+        const list = (data.RESULT && data.RESULT.OIL) || [];
+        const hit = list.find(o => { const c = clean(o.OS_NM); return c && target && (c.includes(target) || target.includes(c)); });
+        if (hit && hit.PRICE) { el.textContent = fmtWon(hit.PRICE); el.classList.remove('off'); }
+        else el.textContent = '가격 정보 없음';
+      } catch { el.textContent = '불러오지 못함'; }
+    };
+    lookup('B027', gasEl); lookup('D047', dieselEl);
+  }
 
-        if (!(searchEndCoord && lastConfirmedEndText === textEnd)) {
-          const endResults = await searchPlaces(textEnd);
-          if (endResults.length === 0) { alert(`도착지 '${textEnd}' 위치를 찾지 못했습니다.`); btn.textContent = '탐색'; btn.disabled = false; return; }
-          const chosenEnd = await promptPlaceSelection(`목적지 선택: ${textEnd}`, endResults); if (!chosenEnd) { btn.textContent = '탐색'; btn.disabled = false; return; }
-          searchEndCoord = chosenEnd; document.getElementById('endInput').value = searchEndCoord.name; lastConfirmedEndText = searchEndCoord.name;
-        }
+  /* ── 설정 ─────────────────────────────────────────────── */
+  const homeInput = $('#homeInput'), homeSuggest = $('#homeSuggest'), foodInput = $('#foodInput');
+  function openSettings() {
+    const home = getHome(); homeInput.value = home ? home.name : '';
+    foodInput.value = store.get('pref_food', '');
+    syncThemeUI(); openSheet('settingsSheet');
+  }
+  $('#openSettings').addEventListener('click', openSettings);
+  const runHomeSuggest = debounce(async (q) => {
+    const seq = ++suggestSeq.home;
+    let r = []; try { r = await searchPlaces(q); } catch { return; }
+    if (seq !== suggestSeq.home || homeInput.value.trim() !== q) return;
+    renderSuggest(homeSuggest, r, (p) => { store.set('pref_home', JSON.stringify(p)); homeInput.value = p.name; hideSuggest(homeSuggest); toast('집 주소를 저장했어요.'); });
+  }, 280);
+  homeInput.addEventListener('input', () => { const q = homeInput.value.trim(); if (!q) { suggestSeq.home++; store.del('pref_home'); hideSuggest(homeSuggest); return; } runHomeSuggest(q); });
+  foodInput.addEventListener('change', () => { store.set('pref_food', foodInput.value.trim()); if (state.routes.length) renderIndex(); });
 
-        // [2번 기능 개선] 경로 비교를 위한 4가지 우선순위 호출 (최단거리 추가)
-        const urlRecommend = `https://apis-navi.kakaomobility.com/v1/directions?origin=${searchStartCoord.lng},${searchStartCoord.lat}&destination=${searchEndCoord.lng},${searchEndCoord.lat}&priority=RECOMMEND`;
-        const urlTime = `https://apis-navi.kakaomobility.com/v1/directions?origin=${searchStartCoord.lng},${searchStartCoord.lat}&destination=${searchEndCoord.lng},${searchEndCoord.lat}&priority=TIME`;
-        const urlDist = `https://apis-navi.kakaomobility.com/v1/directions?origin=${searchStartCoord.lng},${searchStartCoord.lat}&destination=${searchEndCoord.lng},${searchEndCoord.lat}&priority=DISTANCE`;
-        const urlFree = `https://apis-navi.kakaomobility.com/v1/directions?origin=${searchStartCoord.lng},${searchStartCoord.lat}&destination=${searchEndCoord.lng},${searchEndCoord.lat}&priority=RECOMMEND&avoid=toll`;
-
-        statusBadge.textContent = '다중 경로 탐색 중...'; statusBadge.style.display = 'block';
-
-        const [resRec, resTime, resDist, resFree] = await Promise.all([
-          fetch(urlRecommend, { headers: { 'Authorization': `KakaoAK ${KAKAO_REST_API_KEY}` } }),
-          fetch(urlTime, { headers: { 'Authorization': `KakaoAK ${KAKAO_REST_API_KEY}` } }),
-          fetch(urlDist, { headers: { 'Authorization': `KakaoAK ${KAKAO_REST_API_KEY}` } }),
-          fetch(urlFree, { headers: { 'Authorization': `KakaoAK ${KAKAO_REST_API_KEY}` } })
-        ]);
-
-        if (resRec.status === 401 || resRec.status === 403) { alert('카카오 API 연동 에러입니다.'); btn.textContent = '탐색'; btn.disabled = false; return; }
-
-        const dataRec = resRec.ok ? await resRec.json() : null; 
-        const dataTime = resTime.ok ? await resTime.json() : null; 
-        const dataDist = resDist.ok ? await resDist.json() : null; 
-        const dataFree = resFree.ok ? await resFree.json() : null;
-        
-        statusBadge.style.display = 'none'; foundRoutes = [];
-        
-        function parseRoute(data, typeName) {
-          if (!data || !data.routes || data.routes.length === 0) return null;
-          const r = data.routes[0]; const coords = [];
-          r.sections.forEach(sec => sec.roads.forEach(road => { for (let i = 0; i < road.vertexes.length; i += 2) coords.push([road.vertexes[i+1], road.vertexes[i]]); }));
-          return { type: typeName, duration: r.summary.duration, toll: r.summary.fare.toll, geometry: { coordinates: coords } };
-        }
-
-        const rRec = parseRoute(dataRec, '추천경로'); 
-        const rTime = parseRoute(dataTime, '최단시간'); 
-        const rDist = parseRoute(dataDist, '최단거리'); 
-        const rFree = parseRoute(dataFree, '무료도로');
-
-        // [2번 기능 개선] 중복 경로 필터링 로직
-        if (rRec) foundRoutes.push(rRec);
-        // 추천경로와 최단시간의 시간/요금이 완벽히 일치하면 똑같은 길로 간주하고 숨김
-        if (rTime && (!rRec || rTime.duration !== rRec.duration || rTime.toll !== rRec.toll)) foundRoutes.push(rTime);
-        // 최단거리가 기존에 담긴 다른 경로들과 겹치지 않으면 추가
-        if (rDist && !foundRoutes.some(r => r.duration === rDist.duration && r.toll === rDist.toll)) foundRoutes.push(rDist);
-        if (rFree && !foundRoutes.some(r => r.duration === rFree.duration && r.toll === rFree.toll)) foundRoutes.push(rFree);
-
-        if (foundRoutes.length === 0) { alert('경로를 찾을 수 없습니다.'); btn.textContent = '탐색'; btn.disabled = false; return; }
-
-        setupRouteSelectorBar(foundRoutes); selectActiveRoute(0);
-      } catch (err) { alert('경로 탐색 중 오류가 발생했습니다.'); } finally { btn.textContent = '탐색'; btn.disabled = false; }
+  function applyTheme() {
+    const mode = store.get('pref_theme_mode', 'LIGHT');
+    let dark = mode === 'DARK';
+    if (mode === 'AUTO') {
+      const s = store.get('pref_dark_start', '18:00'), e = store.get('pref_dark_end', '06:00');
+      const now = new Date(), t = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+      dark = s < e ? (t >= s && t < e) : (t >= s || t < e);
     }
-
-    function setupRouteSelectorBar(routes) {
-      const bar = document.getElementById('routeSelectorBar'); bar.innerHTML = ''; bar.style.display = 'flex';
-      routes.forEach((r, idx) => {
-        const hours = Math.floor(r.duration / 3600); const mins = Math.floor((r.duration % 3600) / 60);
-        const timeStr = hours > 0 ? `${hours}시간 ${mins}분` : `${mins}분`; const fareStr = r.toll > 0 ? `${r.toll.toLocaleString()}원` : '무료';
-        const btn = document.createElement('button'); btn.className = `route-tab-btn ${idx === 0 ? 'active' : ''}`;
-        btn.innerHTML = `<b>${r.type}</b><span>${timeStr} · ${fareStr}</span>`; btn.onclick = () => selectActiveRoute(idx); bar.appendChild(btn);
-      });
+    const next = dark ? 'dark' : 'light';
+    if (document.documentElement.dataset.theme !== next) {
+      document.documentElement.dataset.theme = next;
+      $('meta[name="theme-color"]').setAttribute('content', dark ? '#14191C' : '#F3EFE4');
+      if (state.routes.length) drawRoutes();
     }
+  }
+  function syncThemeUI() {
+    const mode = store.get('pref_theme_mode', 'LIGHT');
+    document.querySelectorAll('#themeSeg button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.themeMode === mode)));
+    $('#themeTimes').hidden = mode !== 'AUTO';
+    $('#darkStart').value = store.get('pref_dark_start', '18:00');
+    $('#darkEnd').value = store.get('pref_dark_end', '06:00');
+  }
+  document.querySelectorAll('#themeSeg button').forEach(b => b.addEventListener('click', () => { store.set('pref_theme_mode', b.dataset.themeMode); syncThemeUI(); applyTheme(); }));
+  $('#darkStart').addEventListener('change', (e) => { store.set('pref_dark_start', e.target.value); applyTheme(); });
+  $('#darkEnd').addEventListener('change', (e) => { store.set('pref_dark_end', e.target.value); applyTheme(); });
+  setInterval(applyTheme, 60000);
 
-    function isRightDirection(item, isSouthBound) {
-      const dir = (item.direction || '') + (item.name || '');
-      if (dir.includes('양방향') || dir.includes('통합')) return true;
-      if (isSouthBound) { return !(dir.includes('상행') || dir.includes('서울') || dir.includes('춘천') || dir.includes('일산') || dir.includes('양양') || dir.includes('제천')); } 
-      else { return !(dir.includes('하행') || dir.includes('부산') || dir.includes('목포') || dir.includes('순천') || dir.includes('창원') || dir.includes('광주')); }
-    }
+  $('#resetBtn').addEventListener('click', () => {
+    state.run++; clearRoute();
+    setPlace('start', null); setPlace('end', null);
+    renderEmpty(); $('#settingsSheet').close();
+    if (state.me) map.setView([state.me.lat, state.me.lng], 12); else map.setView([36.4, 127.9], 7);
+  });
+  $('#updateBtn').addEventListener('click', async () => {
+    try {
+      if ('caches' in window) { const keys = await caches.keys(); await Promise.all(keys.map(k => caches.delete(k))); }
+      if ('serviceWorker' in navigator) { const regs = await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(r => r.update())); }
+    } catch {}
+    location.reload();
+  });
 
-    function toggleGasStations() {
-      isGasVisible = !isGasVisible;
-      if(isGasVisible) { map.addLayer(gasMarkersLayer); document.getElementById('toggleGasBtn').style.background = '#ea580c'; document.getElementById('toggleGasBtn').style.opacity = '1'; } 
-      else { map.removeLayer(gasMarkersLayer); document.getElementById('toggleGasBtn').style.background = '#64748b'; document.getElementById('toggleGasBtn').style.opacity = '0.5'; }
-    }
-
-    async function searchAndRenderGasStations(latLngs) {
-      gasMarkersLayer.clearLayers(); const checkMap = new Set();
-      const samplePoints = getSamplePoints(latLngs, 15);
-      statusBadge.textContent = '국도 주변 주유소 찾는 중...'; statusBadge.style.display = 'block';
-
-      const fetchPromises = samplePoints.map(async (pt) => {
-        const url = `https://dapi.kakao.com/v2/local/search/category.json?category_group_code=OL7&y=${pt[0]}&x=${pt[1]}&radius=2500`;
-        try { const res = await fetch(url, { headers: { 'Authorization': `KakaoAK ${KAKAO_REST_API_KEY}` } }); const data = await res.json(); return data.documents || []; } catch(e) { return []; }
-      });
-
-      const results = await Promise.all(fetchPromises);
-      results.flat().forEach(st => {
-        if (!checkMap.has(st.id)) {
-          checkMap.add(st.id);
-          const customIcon = L.divIcon({ className: 'rest-unified-marker', html: `<div class="rest-tag" style="background:#ea580c; color:white; border-color:#c2410c; font-size:10px;">⛽ ${st.place_name}</div><div class="rest-dot" style="background:#c2410c; border-color:white;"></div>`, iconSize: [120, 36], iconAnchor: [60, 36] });
-          L.marker([st.y, st.x], { icon: customIcon }).addTo(gasMarkersLayer).on('click', () => openDynamicGasModal(st));
-        }
-      });
-      statusBadge.style.display = 'none'; document.getElementById('toggleGasBtn').style.display = 'flex';
-    }
-
-    async function openDynamicGasModal(st) {
-      document.getElementById('mTitle').textContent = st.place_name; document.getElementById('mRoute').textContent = st.road_address_name || st.address_name;
-      document.getElementById('mBadge').style.display = 'none'; document.getElementById('foodCardDiv').style.display = 'block'; document.getElementById('menuCardDiv').style.display = 'none'; document.getElementById('parkCardDiv').style.display = 'none';
-      
-      const gasVal = document.getElementById('gasPriceVal'); const badge = document.getElementById('gasBadge');
-      badge.textContent = '운영중'; badge.className = 'fuel-status-badge status-on'; gasVal.textContent = '실시간 조회 중...';
-      document.getElementById('dieselBadge').textContent = '없음'; document.getElementById('dieselBadge').className = 'fuel-status-badge status-off'; document.getElementById('dieselPriceVal').textContent = '-';
-      document.getElementById('lpgBadge').textContent = '없음'; document.getElementById('lpgBadge').className = 'fuel-status-badge status-off'; document.getElementById('lpgPriceVal').textContent = '-';
-      document.getElementById('evBadge').textContent = '없음'; document.getElementById('evBadge').className = 'fuel-status-badge status-off'; document.getElementById('evSummaryVal').textContent = '-'; document.getElementById('evDetailBox').style.display = 'none';
-      document.getElementById('mBrandList').innerHTML = `<span class="brand-pill">📞 ${st.phone || '전화번호 없음'}</span>`;
-      document.getElementById('modalOverlay').classList.add('active');
-
-      const katec = proj4('EPSG:4326', 'KATEC', [parseFloat(st.x), parseFloat(st.y)]);
-      const opinetUrl = `http://www.opinet.co.kr/api/aroundAll.do?code=${OPINET_API_KEY}&x=${Math.round(katec[0])}&y=${Math.round(katec[1])}&radius=1500&prodcd=B027&out=json`;
-      try {
-        const res = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(opinetUrl)}`);
-        const data = JSON.parse((await res.json()).contents);
-        let match = null;
-        if (data.RESULT && data.RESULT.OIL) {
-          match = data.RESULT.OIL.find(o => {
-            const cleanOp = o.OS_NM.replace(/주식회사|\(주\)|주유소/g, '').trim(); const cleanKa = st.place_name.replace(/주식회사|\(주\)|주유소/g, '').trim();
-            return cleanOp.includes(cleanKa) || cleanKa.includes(cleanOp);
-          });
-          if (!match) match = data.RESULT.OIL[0];
-        }
-        gasVal.textContent = match && match.PRICE ? `${Number(match.PRICE).toLocaleString()}원` : '조회 불가';
-      } catch(e) { gasVal.textContent = '통신 지연'; }
-    }
-
-    async function searchAndRenderDrowsyAreas(latLngs) {
-      const checkMap = new Set(); const samplePoints = getSamplePoints(latLngs, 20);
-      const fetchPromises = samplePoints.map(async (pt) => {
-        const url = `https://dapi.kakao.com/v2/local/search/keyword.json?query=졸음쉼터&y=${pt[0]}&x=${pt[1]}&radius=3000`;
-        try { const res = await fetch(url, { headers: { 'Authorization': `KakaoAK ${KAKAO_REST_API_KEY}` } }); const data = await res.json(); return data.documents || []; } catch(e) { return []; }
-      });
-      const results = await Promise.all(fetchPromises);
-      let drowsyFound = false;
-      results.flat().forEach(st => {
-        if (st.place_name.includes('졸음쉼터') && !checkMap.has(st.id)) {
-          checkMap.add(st.id); drowsyFound = true;
-          const customIcon = L.divIcon({ className: 'rest-unified-marker', html: `<div class="rest-tag" style="background:#fcd34d; color:#78350f; border-color:#d97706; font-size:10px;">💤 ${st.place_name}</div><div class="rest-dot" style="background:#fcd34d; border-color:#d97706;"></div>`, iconSize: [100, 36], iconAnchor: [50, 36] });
-          const m = L.marker([st.y, st.x], { icon: customIcon }).addTo(markersLayer);
-          
-          // [3번 기능 개선] 졸음쉼터 기본 팝업에 "화장실 구비" 뱃지 추가 (전기차 문구는 제외)
-          m.bindPopup(`
-            <div style="text-align:center; padding: 4px;">
-              <b style="font-size:14px; color:#1e293b;">${st.place_name}</b><br>
-              <span style="font-size:11px; color:#64748b;">휴식 전용 졸음쉼터</span><br>
-              <div style="margin-top:8px;">
-                <span style="background:#dbeafe; color:#1d4ed8; padding:3px 8px; border-radius:5px; font-size:11px; font-weight:800; border:1px solid #bfdbfe;">🚻 화장실 구비</span>
-              </div>
-            </div>
-          `);
-        }
-      });
-      if (!drowsyFound) setTimeout(() => alert("해당 경로에는 졸음쉼터가 없습니다."), 500);
-    }
-
-    function openModal(item) {
-      document.getElementById('mBadge').style.display = 'inline-block'; document.getElementById('foodCardDiv').style.display = 'block'; document.getElementById('menuCardDiv').style.display = 'block'; document.getElementById('parkCardDiv').style.display = 'block';
-      document.getElementById('mTitle').textContent = `${item.name} (${item.direction || ''})`; document.getElementById('mRoute').textContent = `${item.route_name || '고속도로'}`;
-      const badge = document.getElementById('mBadge'); badge.textContent = `혼잡도: ${item.crowded_level || '보통'}`; badge.className = `badge badge-${item.crowded_level || '보통'}`;
-      const gasBadge = document.getElementById('gasBadge'); const gasVal = document.getElementById('gasPriceVal');
-      if (item.gas_price && item.gas_price !== "X") { gasBadge.textContent = '운영중'; gasBadge.className = 'fuel-status-badge status-on'; const p = Number(String(item.gas_price).replace(/,/g, '').replace(/원/g, '')); gasVal.textContent = isNaN(p) ? item.gas_price : `${p.toLocaleString()}원`; } else if (item.has_gas) { gasBadge.textContent = '운영중'; gasBadge.className = 'fuel-status-badge status-on'; gasVal.textContent = '가격 확인중'; } else { gasBadge.textContent = '없음'; gasBadge.className = 'fuel-status-badge status-off'; gasVal.textContent = '-'; }
-      const dieselBadge = document.getElementById('dieselBadge'); const dieselVal = document.getElementById('dieselPriceVal');
-      if (item.diesel_price && item.diesel_price !== "X") { dieselBadge.textContent = '운영중'; dieselBadge.className = 'fuel-status-badge status-on'; const p = Number(String(item.diesel_price).replace(/,/g, '').replace(/원/g, '')); dieselVal.textContent = isNaN(p) ? item.diesel_price : `${p.toLocaleString()}원`; } else if (item.has_gas) { dieselBadge.textContent = '운영중'; dieselBadge.className = 'fuel-status-badge status-on'; dieselVal.textContent = '가격 확인중'; } else { dieselBadge.textContent = '없음'; dieselBadge.className = 'fuel-status-badge status-off'; dieselVal.textContent = '-'; }
-      const lpgBadge = document.getElementById('lpgBadge'); const lpgVal = document.getElementById('lpgPriceVal');
-      if (item.lpg_price && item.lpg_price !== "X") { lpgBadge.textContent = '운영중'; lpgBadge.className = 'fuel-status-badge status-on'; const p = Number(String(item.lpg_price).replace(/,/g, '').replace(/원/g, '')); lpgVal.textContent = isNaN(p) ? item.lpg_price : `${p.toLocaleString()}원`; } else if (item.has_lpg) { lpgBadge.textContent = '운영중'; lpgBadge.className = 'fuel-status-badge status-on'; lpgVal.textContent = 'LPG 가능'; } else { lpgBadge.textContent = '없음'; lpgBadge.className = 'fuel-status-badge status-off'; lpgVal.textContent = '-'; }
-      const evBadge = document.getElementById('evBadge'); const evVal = document.getElementById('evSummaryVal'); const evBox = document.getElementById('evDetailBox'); const evDetail = item.ev_detail; const evPriceInfo = document.getElementById('evPriceInfo');
-      if (evDetail && evDetail.count > 0) { evBadge.textContent = '운영중'; evBadge.className = 'fuel-status-badge status-on'; evVal.textContent = `충전기 ${evDetail.count}기`; evBox.style.display = 'block'; document.getElementById('evHeader').innerHTML = `🔌 충전기 총 ${evDetail.count}기 운영`; document.getElementById('evOperators').innerHTML = (evDetail.operators || []).map(op => `<span class="ev-op-badge">${op}</span>`).join(' '); document.getElementById('evOutputs').innerHTML = `스펙: ${(evDetail.outputs || []).map(o => `<span class="ev-spec-pill">${o}</span>`).join(' ')}`; const mainOp = evDetail.operators[0] || ""; evPriceInfo.textContent = `💰 예상 단가: ${EV_RATES[mainOp] || "약 340~350원/kWh (운영사별 상이)"}`; } else if (item.has_ev) { evBadge.textContent = '운영중'; evBadge.className = 'fuel-status-badge status-on'; evVal.textContent = '충전소 운영'; evBox.style.display = 'none'; } else { evBadge.textContent = '없음'; evBadge.className = 'fuel-status-badge status-off'; evVal.textContent = '-'; evBox.style.display = 'none'; }
-      const brands = item.brand_list || []; document.getElementById('mBrandList').innerHTML = brands.length > 0 ? brands.map(b => `<span class="brand-pill">☕ ${b.name} <small>(${b.hours})</small></span>`).join('') : '<span style="font-size:11px; color:#94a3b8;">입점 브랜드 정보 없음</span>';
-      const menuList = item.menu_list || [];
-      if (menuList.length > 0) { currentCategories = categorizeMenus(menuList); const tabsContainer = document.getElementById('mStoreTabs'); const keys = Object.keys(currentCategories).filter(k => currentCategories[k].length > 0); tabsContainer.innerHTML = keys.map((k, idx) => `<button class="store-tab-btn ${idx === 0 ? 'active' : ''}" onclick="selectCat('${k}', this)">${k} (${currentCategories[k].length})</button>`).join(''); renderMenuCards(currentCategories[keys[0]]); } else { document.getElementById('mStoreTabs').innerHTML = ''; document.getElementById('mMenuGrid').innerHTML = `<div style="font-size:12px; color:#64748b; padding:10px;">${item.best_food || '식당가 운영 중'}</div>`; }
-      document.getElementById('mTotalPark').textContent = item.parking_count || ((item.parking_detail?.small||0) + (item.parking_detail?.large||0)); document.getElementById('mSmallPark').textContent = item.parking_detail?.small || 0; document.getElementById('mLargePark').textContent = item.parking_detail?.large || 0;
-      document.getElementById('modalOverlay').classList.add('active');
-    }
-
-    function selectActiveRoute(targetIdx) {
-      document.querySelectorAll('.route-tab-btn').forEach((b, idx) => { b.classList.toggle('active', idx === targetIdx); });
-      routeLayersGroup.clearLayers(); arrowLayersGroup.clearLayers(); 
-      markersLayer.clearLayers(); gasMarkersLayer.clearLayers(); 
-      document.getElementById('toggleGasBtn').style.display = 'none';
-      if(animTimerId) clearInterval(animTimerId); 
-
-      foundRoutes.forEach((route, idx) => {
-        const latLngs = route.geometry.coordinates; 
-        const isSelected = (idx === targetIdx);
-        if (isSelected) {
-          activePolyline = L.polyline(latLngs, { color: '#60a5fa', weight: 16, opacity: 0.35, lineJoin: 'round' }).addTo(routeLayersGroup);
-        }
-        const poly = L.polyline(latLngs, { color: isSelected ? '#1d4ed8' : '#94a3b8', weight: isSelected ? 6 : 4, opacity: isSelected ? 1 : 0.4, dashArray: isSelected ? null : '5, 5' }).addTo(routeLayersGroup);
-
-        if (isSelected) {
-          activePolyline = poly; 
-          poly.bringToFront(); map.fitBounds(poly.getBounds(), { padding: [30, 30] });
-          currentArrowLayer = L.polylineDecorator(poly, { patterns: [{ offset: 0, repeat: 100, symbol: L.Symbol.arrowHead({ pixelSize: 12, polygon: false, pathOptions: { stroke: true, weight: 3, color: '#ffffff', opacity: 1 } }) }] }).addTo(arrowLayersGroup);
-          
-          animTimerId = setInterval(() => {
-            arrowOffset = (arrowOffset + 2) % 100;
-            if(currentArrowLayer && currentArrowLayer.options) { const p = currentArrowLayer.options.patterns; if(p && p[0]) { p[0].offset = arrowOffset; currentArrowLayer.setPatterns(p); } }
-          }, 40);
-
-          if (route.type.includes('무료')) {
-             searchAndRenderGasStations(latLngs);
-          } else {
-             const isSouthBound = (searchStartCoord && searchEndCoord) ? (searchStartCoord.lat > searchEndCoord.lat) : true;
-             const prefFuel = document.getElementById('fuelSelect').value; const prefFood = localStorage.getItem('pref_food') || ''; 
-
-             allRestAreas.forEach(item => {
-               const rLat = parseFloat(item.lat); const rLng = parseFloat(item.lng);
-               if (isNaN(rLat) || isNaN(rLng)) return;
-               if (prefFuel === 'GAS' && !item.has_gas) return; if (prefFuel === 'LPG' && !item.has_lpg) return; if (prefFuel === 'EV' && !item.has_ev) return;
-               const p = [rLat, rLng]; let onPath = false;
-               for (let i = 0; i < latLngs.length - 1; i++) { if (distToSegment(p, latLngs[i], latLngs[i + 1]) <= 1.8) { onPath = true; break; } }
-               if (!onPath || !isRightDirection(item, isSouthBound)) return;
-               let isFavFood = false;
-               if (prefFood && item.menu_list) isFavFood = item.menu_list.some(m => m.name && m.name.includes(prefFood));
-               const customStyle = isFavFood ? 'background: #ef4444; color: white; border-color: #ef4444;' : '';
-               const iconHtml = `<div class="rest-tag" style="${customStyle}">${item.name}${isFavFood ? ' ⭐' : ''}</div><div class="rest-dot"></div>`;
-               const customIcon = L.divIcon({ className: 'rest-unified-marker', html: iconHtml, iconSize: [100, 36], iconAnchor: [50, 36] });
-               L.marker([rLat, rLng], { icon: customIcon }).addTo(markersLayer).on('click', () => openModal(item));
-             });
-
-             searchAndRenderDrowsyAreas(latLngs);
-          }
-        }
-      });
-    }
-
-    function resetView() {
-      closeModal(); document.getElementById('routeSelectorBar').style.display = 'none'; document.getElementById('toggleGasBtn').style.display = 'none'; startDropdown.style.display = 'none'; endDropdown.style.display = 'none'; document.getElementById('fab-container').classList.remove('open'); routeLayersGroup.clearLayers(); arrowLayersGroup.clearLayers(); markersLayer.clearLayers(); gasMarkersLayer.clearLayers(); if(animTimerId) clearInterval(animTimerId); document.getElementById('startInput').value = ''; document.getElementById('endInput').value = ''; searchStartCoord = null; searchEndCoord = null; lastConfirmedStartText = null; lastConfirmedEndText = null; foundRoutes = []; activePolyline = null; if (currentUserLatLng) map.setView(currentUserLatLng, 15); else map.setView([36.5, 127.8], 8);
-    }
-  </script>
-  
-  <script>
-    if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').then(() => console.log('서비스 워커 등록 성공')).catch(err => console.error('서비스 워커 등록 실패:', err)); }); }
+  /* ── 시작 ─────────────────────────────────────────────── */
+  applyTheme();
+  renderEmpty();
+  loadData();
+  if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
   </script>
 </body>
 </html>
