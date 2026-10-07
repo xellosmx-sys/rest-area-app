@@ -1379,28 +1379,42 @@
   }
 
   // CCTV 실시간 스트리밍 모달 팝업
-  function openCctvModal(item, km) {
+function openCctvModal(item, km) {
     $('#detailTitle').textContent = item.cctvname || 'CCTV 영상';
     $('#detailSub').textContent = `출발 후 약 ${Math.round(km)}km 지점 (실시간 HLS 영상)`;
     $('#detailUsage').hidden = true;
 
-    const video = h('video', { controls: true, autoplay: true, playsinline: true });
+    const video = h('video', { controls: true, autoplay: true, playsinline: true, muted: true });
     const container = h('div', { class: 'cctv-player-container' }, video);
 
     $('#detailBody').replaceChildren(h('section', { class: 'sec' }, container));
     openSheet('detailSheet');
 
-    const videoUrl = item.cctvurl;
+    // 영상 URL을 Worker 스트림 프록시로 전달하도록 변환
+    const origUrl = item.cctvurl;
+    const proxiedUrl = `${CONFIG.API_BASE}/its/stream?url=${encodeURIComponent(origUrl)}`;
+
     if (Hls.isSupported()) {
       if (currentHls) currentHls.destroy();
-      const hls = new Hls();
-      hls.loadSource(videoUrl);
+      const hls = new Hls({
+        xhrSetup: function (xhr, url) {
+          // HLS 내부 세그먼트(.ts) 파일 요청도 Worker 프록시를 거치도록 자동 변경
+          if (!url.includes('/its/stream')) {
+            xhr.open('GET', `${CONFIG.API_BASE}/its/stream?url=${encodeURIComponent(url)}`, true);
+          }
+        }
+      });
+      hls.loadSource(proxiedUrl);
       hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        video.play().catch(() => {});
+      });
       currentHls = hls;
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = videoUrl;
-      video.addEventListener('loadedmetadata', () => video.play());
+      video.src = proxiedUrl;
+      video.addEventListener('loadedmetadata', () => {
+        video.play().catch(() => {});
+      });
     } else {
       toast('현재 브라우저에서는 이 CCTV 영상을 재생할 수 없습니다.');
     }
