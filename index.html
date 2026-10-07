@@ -107,7 +107,7 @@
       border-bottom: 3px double var(--rule-strong);
     }
     .brandline { display: flex; align-items: center; justify-content: space-between; height: 44px; }
-    .wordmark { margin: 0; font-size: 21px; font-weight: 900; letter-spacing: -0.04em; }
+    .wordmark { cursor: pointer; -webkit-tap-highlight-color: transparent; user-select: none; margin: 0; font-size: 21px; font-weight: 900; letter-spacing: -0.04em; }
     .brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
     .tagline { font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .wordmark small { font-size: 12px; font-weight: 700; color: var(--green); margin-left: 3px; letter-spacing: 0; }
@@ -494,7 +494,7 @@
   <div class="app">
     <header class="masthead">
       <div class="brandline">
-        <div class="brand"><h1 class="wordmark">쉬어갈카<small>car</small></h1><span class="tagline">고속도로 휴게소의 모든 것</span></div>
+        <div class="brand"><h1 class="wordmark" role="button" tabindex="0" aria-label="처음 화면으로">쉬어갈카<small>car</small></h1><span class="tagline">고속도로 휴게소의 모든 것</span></div>
         <button class="icon-btn" id="openSettings" type="button" aria-label="설정"><svg class="ic"><use href="#i-sliders"/></svg></button>
       </div>
 
@@ -1593,12 +1593,19 @@
   $('#darkEnd').addEventListener('change', (e) => { store.set('pref_dark_end', e.target.value); applyTheme(); });
   setInterval(applyTheme, 60000);
 
-  $('#resetBtn').addEventListener('click', () => {
-    state.run++; clearRoute();
+  function resetApp() {
+    state.run++; state.extrasLoading = false; clearRoute();
+    document.querySelectorAll('dialog.sheet[open]').forEach(d => d.close()); // 열려 있는 설정·상세·CCTV 창 닫기
+    document.querySelectorAll('.suggest').forEach(el => { el.hidden = true; el.replaceChildren(); });
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     setPlace('start', null); setPlace('end', null);
-    renderEmpty(); $('#settingsSheet').close();
+    renderEmpty();
     if (state.me) map.setView([state.me.lat, state.me.lng], 12); else map.setView([36.4, 127.9], 7);
-  });
+  }
+  $('#resetBtn').addEventListener('click', resetApp);
+  const wordmark = document.querySelector('.wordmark');
+  wordmark.addEventListener('click', resetApp);
+  wordmark.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); resetApp(); } });
   $('#updateBtn').addEventListener('click', async () => {
     try {
       if ('caches' in window) { const keys = await caches.keys(); await Promise.all(keys.map(k => caches.delete(k))); }
