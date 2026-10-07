@@ -21,7 +21,7 @@
   <!-- HLS.js 라이브러리 추가 (모바일/PC 브라우저 HLS 스트리밍 호환) -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
 
-  <style>
+<style>
     /* ── 토큰 ─────────────────────────────────────────── */
     :root {
       --font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
@@ -240,22 +240,45 @@
     }
     .text-btn:hover { background: var(--paper-2); }
 
-    .chips { display: flex; gap: 6px; padding: 4px 16px 10px; overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
+    /* 🎯 칩(버튼) 가로 탭 바 레이아웃 수정: 한 화면에 맞추며 터치 스크롤 지원 */
+    .chips {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 12px 10px;
+      overflow-x: auto;
+      white-space: nowrap;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+      flex-shrink: 0;
+    }
+    .chips::-webkit-scrollbar { display: none; }
+
     .chip {
-      flex-shrink: 0; min-height: 36px; padding: 0 12px; border-radius: 18px;
-      border: 1px solid var(--rule); background: var(--paper-3); color: var(--ink-2);
-      font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;
-      transition: background .3s var(--ease), color .3s var(--ease), border-color .3s var(--ease), transform .18s var(--ease-press);
+      flex-shrink: 0;
+      min-height: 34px;
+      padding: 0 10px;
+      border-radius: 18px;
+      border: 1px solid var(--rule);
+      background: var(--paper-3);
+      color: var(--ink-2);
+      font-size: 12.5px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: background .2s var(--ease), color .2s var(--ease), border-color .2s var(--ease), transform .18s var(--ease-press);
     }
     .chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
-    .chip-layer::before { content: ""; width: 10px; height: 10px; border-radius: 2px; border: 2px solid var(--ink-3); }
+    .chip-layer::before { content: ""; width: 8px; height: 8px; border-radius: 2px; border: 2px solid var(--ink-3); flex-shrink: 0; }
     .chip-layer[aria-pressed="true"] { background: var(--paper-3); color: var(--ink); border: 1px solid var(--ochre); }
     .chip-layer[aria-pressed="true"]::before { border-color: var(--ochre); }
     .chip-cctv[aria-pressed="true"] { border-color: #2B6CB0; }
     .chip-cctv[aria-pressed="true"]::before { border-color: #2B6CB0; background: #2B6CB0; }
     .chip, .seg button, .text-btn { position: relative; }
     .chip::after, .seg button::after, .text-btn::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: var(--tap); transform: translateY(-50%); }
-    .chip-sep { width: 1px; background: var(--rule); margin: 6px 2px; flex-shrink: 0; }
+    .chip-sep { width: 1px; height: 16px; background: var(--rule); margin: 0 1px; flex-shrink: 0; }
 
     .list { list-style: none; margin: 0; padding: 0 0 max(16px, env(safe-area-inset-bottom)); overflow-y: auto; flex: 1; min-height: 0; overscroll-behavior: contain; }
     .list > li { border-top: 1px dotted var(--rule); }
