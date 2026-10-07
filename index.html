@@ -18,6 +18,8 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.js" integrity="sha384-FhPn/2P/fJGhQLeNWDn9B/2Gml2bPOrKJwFqJXgR3xOPYxWg5mYQ5XZdhUSugZT0" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.min.js" integrity="sha384-sj0T8LNfPM3GGoPwyfyPWLkfgcUNuvfMmqMxNrdnuiPT7OiEObjXAd1i4dRaZLQ+" crossorigin="anonymous"></script>
+  <!-- HLS.js 라이브러리 추가 (모바일/PC 브라우저 HLS 스트리밍 호환) -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
   <style>
     /* ── 토큰 ─────────────────────────────────────────── */
@@ -295,6 +297,7 @@
     .legend i { width: 12px; height: 12px; border-radius: 50%; background: var(--green); display: inline-block; }
     .legend i.l-drowsy { border-radius: 3px; background: transparent; border: 2px solid var(--ochre); }
     .legend i.l-gas { background: var(--orange-fill); }
+    .legend i.l-cctv { background: #2B6CB0; border-radius: 3px; }
     .quick { display: flex; flex-wrap: wrap; gap: 8px; }
     .quick .chip { min-height: var(--tap); padding: 0 14px; border-radius: 10px; color: var(--ink); }
     .skel { height: 64px; margin: 0 16px; border-top: 1px solid var(--rule); position: relative; flex-shrink: 0; }
@@ -311,6 +314,14 @@
     .mk-wrap { display: grid; place-items: center; }
     .mk-drowsy { width: 16px; height: 16px; border-radius: 4px; background: #F3EFE4; border-color: #8A6400; }
     :root[data-theme="dark"] .mk-drowsy { background: #20292E; border-color: #E0B544; }
+    
+    /* CCTV 지도 마커 스타일 */
+    .mk-cctv {
+      width: 22px; height: 22px; border-radius: 6px; background: #2B6CB0; border-color: #ffffff;
+      display: flex; align-items: center; justify-content: center; font-size: 11px;
+    }
+    .far .mk-cctv { width: 10px; height: 10px; border-width: 1px; font-size: 0; }
+
     .far .mk-rest:not(.is-active) { width: 12px; height: 12px; font-size: 0; border-width: 1.5px; }
     .far .mk-gas, .far .mk-drowsy { width: 8px; height: 8px; border-width: 1px; }
     .far .mk-gas { opacity: .8; }
@@ -387,6 +398,13 @@
     .usage { display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; background: var(--paper-2); color: var(--ink-2); }
     .usage[hidden] { display: none; }
 
+    /* CCTV 재생 모달 스타일 */
+    .cctv-player-container {
+      width: 100%; aspect-ratio: 16/9; background: #000; border-radius: var(--r-md); overflow: hidden;
+      margin-top: 10px; display: flex; align-items: center; justify-content: center; position: relative;
+    }
+    .cctv-player-container video { width: 100%; height: 100%; object-fit: contain; }
+
     /* 설정 */
     .set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; padding: 6px 0; }
     .set-row + .set-row { border-top: 1px dotted var(--rule); }
@@ -449,15 +467,6 @@
   </style>
 </head>
 <body>
-<!--
-THESIS: 경로를 도로지도책 한 쪽처럼 찍고, 휴게소는 그 쪽의 번호 색인표에서 비교한다. 지도 위에 이름 라벨을 쌓는 지도앱 기본형을 거부한다.
-OWN-WORLD: 무광 종이 바탕과 먹색 글자, 고속도로 초록·주유 주황·졸음쉼터 황토의 범례 기호, 이중선 쪽 머리, 점선 색인 괘선, 인쇄 톤으로 누른 지도.
-STORY: 출발 전·휴게 중인 운전자가 경로를 고르고, 내 방향 휴게소를 거리순으로 훑고, 유가·충전·편의시설을 보고 들를 곳을 정한다.
-FIRST VIEWPORT: 위 쪽 머리에 출발·도착 입력과 '경로 찾기', 아래 지도. 경로가 잡히면 입력은 한 줄 요약으로 접히고 지도 38% / 경로 탭 + 번호 색인표.
-FORM: 도로지도책(후보 4번), seed ef3d29c8.
-FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
--->
-
   <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
     <symbol id="i-swap" viewBox="0 0 24 24"><path d="M8 4v16M4 8l4-4 4 4M16 20V4M12 16l4 4 4-4"/></symbol>
     <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
@@ -477,6 +486,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3.5 2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 17l-5.2 2.7 1-5.9-4.3-4.1 5.9-.8Z"/></symbol>
     <symbol id="i-expand" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
     <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></symbol>
   </svg>
 
   <div class="app">
@@ -586,7 +596,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       </section>
       <section class="sec">
         <h3>만든 사람</h3>
-        <p class="credit">L.H.H · <a href="mailto:xellosmx@naver.com" style="color:inherit">xellosmx@naver.com</a><br />지도 © OpenStreetMap · 장소·길찾기 카카오 · 유가 오피넷</p>
+        <p class="credit">L.H.H · <a href="mailto:xellosmx@naver.com" style="color:inherit">xellosmx@naver.com</a><br />지도 © OpenStreetMap · 장소·길찾기 카카오 · 유가 오피넷 · CCTV 국토교통부</p>
       </section>
     </div>
   </dialog>
@@ -604,25 +614,21 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
   <script>
   'use strict';
 
-  /* ── 설정 ───────────────────────────────────────────────
-     API_BASE: Cloudflare Worker 주소(예: https://shigeo.<계정>.workers.dev).
-     채우면 모든 외부 호출이 Worker로 가고, 아래 두 키는 지운다.
-     비워 두면 임시로 키를 직접 쓴다 — Worker 배포 후 반드시 비우고 키를 재발급할 것. */
   const CONFIG = {
     API_BASE: 'https://wispy-unit-96b0.xellosmx.workers.dev',
     KAKAO_REST_API_KEY: '',
     OPINET_API_KEY: '',
     DATA_URL: 'rest_areas_master.json',
-    REST_MAX_KM: 0.6,     // 휴게소 좌표는 도로 중심에서 60~250m 옆에 찍혀 있다
+    REST_MAX_KM: 0.6,
     DROWSY_MAX_KM: 0.6,
     GAS_MAX_KM: 1.5,
+    CCTV_MAX_KM: 2.0, // 경로 주변 CCTV 검색 반경 (2km)
   };
   const EV_RATES = { '기후에너지환경부': '약 347원/kWh', '한국전력': '약 347원/kWh', '현대엔지니어링': '약 347원/kWh', '에버온': '약 330원/kWh', '채비(CHAEVI)': '약 340원/kWh' };
   const USAGE_LABEL = { '혼잡': '평소 이용 많음', '보통': '평소 이용 보통', '원활': '평소 이용 적음' };
 
   proj4.defs('KATEC', '+proj=tmerc +lat_0=38 +lon_0=128 +k=0.9999 +x_0=400000 +y_0=600000 +ellps=bessel +towgs84=-115.80,474.99,674.11,1.16,-2.31,-1.63,6.43 +units=m +no_defs');
 
-  /* ── 작은 도구 ─────────────────────────────────────────── */
   const $ = (sel, root = document) => root.querySelector(sel);
   const SVGNS = 'http://www.w3.org/2000/svg';
   function h(tag, attrs, ...children) {
@@ -666,7 +672,6 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     const n = Number(String(v).replace(/[,원\s]/g, ''));
     return Number.isFinite(n) && n > 0 ? n : null;
   }
-  // '칠곡(부산)' → { base: '칠곡', toward: '부산' }
   function splitName(name = '') {
     const m = name.match(/^(.*?)\((.+)\)$/);
     if (!m) return { base: name, toward: null };
@@ -681,7 +686,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     await Promise.all(workers); return out;
   }
 
-  /* ── 외부 API (API_BASE가 있으면 Worker로) ─────────────── */
+  /* ── 외부 API ── */
   class ApiError extends Error { constructor(status, msg) { super(msg); this.status = status; } }
   async function getJSON(url, opts) {
     let res;
@@ -703,13 +708,25 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
   async function opinetAround(params) {
     const qs = new URLSearchParams({ ...params, out: 'json' }).toString();
     if (CONFIG.API_BASE) return getJSON(`${CONFIG.API_BASE}/opinet/around?${qs}`);
-    // 임시: Worker 배포 전까지만 공개 CORS 프록시를 거친다(키가 제3자 서버를 지나감).
     const target = `http://www.opinet.co.kr/api/aroundAll.do?code=${CONFIG.OPINET_API_KEY}&${qs}`;
     const wrap = await getJSON(`https://api.allorigins.win/get?url=${encodeURIComponent(target)}`);
     return JSON.parse(wrap.contents);
   }
+  // ITS CCTV API 프록시 호출
+  async function getItsCctv(bbox) {
+    if (!CONFIG.API_BASE) return [];
+    const params = new URLSearchParams({
+      minX: bbox.minLng, maxX: bbox.maxLng,
+      minY: bbox.minLat, maxY: bbox.maxLat
+    }).toString();
+    try {
+      const res = await getJSON(`${CONFIG.API_BASE}/its/cctv?${params}`);
+      return (res && res.response && res.response.data) ? res.response.data : [];
+    } catch { return []; }
+  }
+
   function apiErrorText(err) {
-    if (err && (err.status === 401 || err.status === 403)) return '카카오 API 인증에 실패했어요. 키나 프록시 주소를 확인해 주세요.';
+    if (err && (err.status === 401 || err.status === 403)) return 'API 인증에 실패했어요. 키나 프록시 주소를 확인해 주세요.';
     if (err && err.status === 429) return '오늘 조회 한도를 넘었어요. 잠시 후 다시 시도해 주세요.';
     if (err && err.status === 0) return '인터넷 연결을 확인해 주세요.';
     return '잠시 문제가 생겼어요. 다시 시도해 주세요.';
@@ -719,9 +736,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     return (data.documents || []).map(d => ({ name: d.place_name, address: d.road_address_name || d.address_name, lat: +d.y, lng: +d.x }));
   }
 
-  /* ── 기하: 경로 투영 ────────────────────────────────────
-     경로를 km 평면으로 펴고, 점마다 가장 가까운 선분·누적 거리·좌우를 구한다.
-     우측통행이라 진행 방향 오른쪽(외적 < 0)에 있는 휴게소가 내 방향이다. */
+  /* ── 기하: 경로 투영 ── */
   function buildGeo(coords) {
     const lat0 = coords[0][0], kx = Math.cos(lat0 * Math.PI / 180) * 111.32, ky = 110.574;
     const xy = coords.map(([la, ln]) => [ln * kx, la * ky]);
@@ -760,7 +775,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     const step = pts.length / cap; return Array.from({ length: cap }, (_, i) => pts[Math.floor(i * step)]);
   }
 
-  /* ── 상태 ─────────────────────────────────────────────── */
+  /* ── 상태 ── */
   const state = {
     areas: [], dataReady: false,
     start: null, end: null,
@@ -768,12 +783,13 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     items: [], extrasLoading: false,
     fuel: store.get('pref_fuel', 'ALL'),
     showDrowsy: store.get('pref_show_drowsy', '1') === '1',
+    showCctv: true, // CCTV 표시 활성화
     me: null, watchId: null,
     run: 0, activeKey: null,
   };
   if (!['ALL', 'GAS', 'LPG', 'EV'].includes(state.fuel)) state.fuel = 'ALL';
 
-  /* ── 지도 ─────────────────────────────────────────────── */
+  /* ── 지도 ── */
   const map = L.map('map', { zoomControl: false }).setView([36.4, 127.9], 7);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' }).addTo(map);
   L.control.zoom({ position: 'topright', zoomInTitle: '확대', zoomOutTitle: '축소' }).addTo(map);
@@ -785,7 +801,11 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     if (!kind) return;
     const item = (color, label, square) => h('span', null, h('i', { style: `background:${square ? '#F3EFE4' : color};${square ? `border:2px solid ${color};border-radius:2px;width:7px;height:7px` : ''}` }), label);
     if (kind === 'free') el.append(item('#E2701F', '주유소'));
-    else { el.append(item('#0E7A55', '휴게소')); if (state.showDrowsy) el.append(item('#8A6400', '졸음쉼터', true)); }
+    else {
+      el.append(item('#0E7A55', '휴게소'));
+      if (state.showDrowsy) el.append(item('#8A6400', '졸음쉼터', true));
+      el.append(item('#2B6CB0', 'CCTV', true));
+    }
   }
   const syncFar = () => map.getContainer().classList.toggle('far', map.getZoom() < 9);
   map.on('zoomend', syncFar); syncFar();
@@ -807,12 +827,13 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     arrows: L.layerGroup().addTo(map),
     ends: L.layerGroup().addTo(map),
     items: L.layerGroup().addTo(map),
+    cctv: L.layerGroup().addTo(map), // CCTV 마커 전용 레이어
     me: L.layerGroup().addTo(map),
   };
   const markerByKey = new Map();
   const dot = (cls, size) => L.divIcon({ className: 'mk-wrap', html: `<div class="mk ${cls}"></div>`, iconSize: [size, size], iconAnchor: [size / 2, size / 2] });
 
-  /* ── 데이터 ───────────────────────────────────────────── */
+  /* ── 데이터 ── */
   async function loadData() {
     try {
       const res = await fetch(CONFIG.DATA_URL);
@@ -824,7 +845,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     }
   }
 
-  /* ── 위치 ─────────────────────────────────────────────── */
+  /* ── 위치 ── */
   function setMe(pos) {
     state.me = { lat: pos.coords.latitude, lng: pos.coords.longitude };
     layers.me.clearLayers();
@@ -849,17 +870,16 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
   }
   function stopWatch() { if (state.watchId != null) { navigator.geolocation.clearWatch(state.watchId); state.watchId = null; } }
   document.addEventListener('visibilitychange', () => { if (document.hidden) stopWatch(); else if (state.me) startWatch(); });
-  // 이미 허용된 경우에만 조용히 위치를 켠다(첫 화면에서 권한 팝업을 띄우지 않음)
   if (navigator.permissions && navigator.geolocation) {
     navigator.permissions.query({ name: 'geolocation' }).then(p => { if (p.state === 'granted') locateMe(); }).catch(() => {});
   }
 
-  /* ── 집 주소 ──────────────────────────────────────────── */
+  /* ── 집 주소 ── */
   function getHome() {
     const raw = store.get('pref_home');
     if (!raw) return null;
     try { const o = JSON.parse(raw); if (o && o.name) return o; } catch {}
-    return { name: raw };   // 예전 버전: 글자만 저장돼 있음
+    return { name: raw };
   }
   async function resolveHome() {
     const home = getHome();
@@ -873,7 +893,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     } catch (e) { toast(apiErrorText(e)); return null; }
   }
 
-  /* ── 입력칸·자동완성 ──────────────────────────────────── */
+  /* ── 입력칸·자동완성 ── */
   const inputs = { start: $('#startInput'), end: $('#endInput') };
   const suggests = { start: $('#startSuggest'), end: $('#endSuggest') };
   const suggestSeq = { start: 0, end: 0, home: 0 };
@@ -933,7 +953,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     state.end = s; inputs.end.value = sv;
   });
 
-  /* ── 장소 고르기 시트 ─────────────────────────────────── */
+  /* ── 장소 고르기 시트 ── */
   function pickPlace(title, sub, places) {
     return new Promise((resolve) => {
       const dlg = $('#pickSheet');
@@ -959,7 +979,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     setPlace(which, pick); return pick;
   }
 
-  /* ── 경로 찾기 ────────────────────────────────────────── */
+  /* ── 경로 찾기 ── */
   const ROUTE_SPECS = [
     { label: '추천', kind: 'main', params: { priority: 'RECOMMEND' } },
     { label: '최단시간', kind: 'main', params: { priority: 'TIME' } },
@@ -1053,7 +1073,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     map.fitBounds(line.getBounds(), { padding: [28, 28] });
   }
 
-  /* ── 경로 위 항목 모으기 ──────────────────────────────── */
+  /* ── 경로 위 항목 모으기 ── */
   function restItems(g) {
     const out = [];
     for (const a of state.areas) {
@@ -1073,7 +1093,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     else toast(`일부 구간의 ${what} 검색이 실패했어요. 목록이 빠질 수 있어요.`, 4000);
   }
   async function drowsyItems(route, g) {
-    const pts = samplePoints(route.coords, g, 5, 60);   // 반경 3km 원이 경로를 빈틈없이 덮도록
+    const pts = samplePoints(route.coords, g, 5, 60);
     const fail = { n: 0, err: null };
     const res = await pool(pts, 6, pt => kakaoLocal('keyword', { query: '졸음쉼터', y: pt[0], x: pt[1], radius: 3000, size: 15 }).then(d => d.documents || []).catch(e => { fail.n++; fail.err = e; return []; }));
     reportFail(fail, pts.length, '졸음쉼터');
@@ -1082,13 +1102,13 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       if (seen.has(d.id) || !d.place_name.includes('졸음쉼터')) continue; seen.add(d.id);
       const lat = +d.y, lng = +d.x, p = project(g, lat, lng);
       if (p.dist > CONFIG.DROWSY_MAX_KM || !p.right) continue;
-      if (out.some(o => Math.abs(o.km - p.km) < 0.3)) continue;   // 같은 쉼터가 이름만 달리 두 번 등록된 경우
+      if (out.some(o => Math.abs(o.km - p.km) < 0.3)) continue;
       out.push({ kind: 'drowsy', key: 'd:' + d.id, d, lat, lng, km: p.km });
     }
     return out;
   }
   async function gasItems(route, g) {
-    const pts = samplePoints(route.coords, g, 3.5, 70);  // 반경 2km 원이 경로를 덮도록
+    const pts = samplePoints(route.coords, g, 3.5, 70);
     const fail = { n: 0, err: null };
     const res = await pool(pts, 6, pt => kakaoLocal('category', { category_group_code: 'OL7', y: pt[0], x: pt[1], radius: 2000, size: 15 }).then(d => d.documents || []).catch(e => { fail.n++; fail.err = e; return []; }));
     reportFail(fail, pts.length, '주유소');
@@ -1099,10 +1119,41 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       if (p.dist > CONFIG.GAS_MAX_KM) continue;
       out.push({ kind: 'gas', key: 'g:' + d.id, d, lat, lng, km: p.km, dist: p.dist });
     }
-    // 8km 구간마다 도로에 가장 붙은 한 곳만 남긴다(도심 출발 구간에 수십 곳이 몰리는 것을 막음)
     const best = new Map();
     for (const it of out) { const b = Math.floor(it.km / 8); if (!best.has(b) || it.dist < best.get(b).dist) best.set(b, it); }
     return [...best.values()];
+  }
+
+  // ITS CCTV 정보 조회 및 지도 표시
+  async function loadCctvItems(g) {
+    layers.cctv.clearLayers();
+    if (!state.showCctv) return;
+
+    const rawData = await getItsCctv(g.bbox);
+    if (!rawData || !rawData.length) return;
+
+    const seen = new Set();
+    for (const item of rawData) {
+      const lat = +item.coordy, lng = +item.coordx;
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+
+      const p = project(g, lat, lng);
+      if (p.dist > CONFIG.CCTV_MAX_KM) continue; // 경로 주변 2km 이내만 수집
+
+      const key = item.cctvurl;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      // CCTV 마커 지도에 생성
+      const iconHtml = `<div class="mk mk-cctv" title="${escapeHtml(item.cctvname)}"><svg class="ic" style="width:14px;height:14px;stroke:#fff"><use href="#i-camera"/></svg></div>`;
+      const m = L.marker([lat, lng], {
+        icon: L.divIcon({ className: 'mk-wrap', html: iconHtml, iconSize: [22, 22], iconAnchor: [11, 11] }),
+        title: item.cctvname,
+        zIndexOffset: 800
+      }).addTo(layers.cctv);
+
+      m.on('click', () => openCctvModal(item, p.km));
+    }
   }
 
   async function selectRoute(i) {
@@ -1116,6 +1167,10 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     const wantExtras = route.kind === 'free' || state.showDrowsy;
     state.extrasLoading = wantExtras;
     renderIndex();
+
+    // CCTV 불러오기 (비동기)
+    loadCctvItems(g);
+
     if (!wantExtras) return;
     const extras = route.kind === 'free' ? await gasItems(route, g) : await drowsyItems(route, g);
     if (run !== state.run) return;
@@ -1124,7 +1179,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     renderIndex();
   }
 
-  /* ── 색인표 그리기 ────────────────────────────────────── */
+  /* ── 색인표 그리기 ── */
   function passesFuel(a) {
     if (state.fuel === 'GAS') return !!a.has_gas;
     if (state.fuel === 'LPG') return !!a.has_lpg;
@@ -1282,7 +1337,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         h('button', { class: 'chip', type: 'button', onclick: async () => { const hm = await resolveHome(); if (hm) { setPlace('end', { ...hm, name: '집' }); if (!state.start) inputs.start.focus(); } } }, icon('home', 'ic ic-sm'), home ? '집으로 가기' : '집 주소 저장하기'),
       ),
       h('div', { class: 'legend', 'aria-label': '범례' },
-        h('span', null, h('i'), '휴게소'), h('span', null, h('i', { class: 'l-drowsy' }), '졸음쉼터'), h('span', null, h('i', { class: 'l-gas' }), '주유소(무료도로)')),
+        h('span', null, h('i'), '휴게소'), h('span', null, h('i', { class: 'l-drowsy' }), '졸음쉼터'), h('span', null, h('i', { class: 'l-gas' }), '주유소(무료도로)'), h('span', null, h('i', { class: 'l-cctv' }), 'CCTV')),
     ));
     setTimeout(() => map.invalidateSize(), 60);
   }
@@ -1291,7 +1346,8 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     box.replaceChildren(h('div', { class: 'index-head' }, h('p', { class: 'index-title' }, '경로를 찾는 중…')), h('div', { class: 'skel' }), h('div', { class: 'skel' }));
   }
 
-  /* ── 시트 ─────────────────────────────────────────────── */
+  /* ── 시트 ── */
+  let currentHls = null;
   const wide = matchMedia('(min-width: 900px)');
   function openSheet(id) {
     const d = document.getElementById(id);
@@ -1302,8 +1358,10 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
   document.querySelectorAll('dialog.sheet').forEach(d => {
     d.addEventListener('click', (e) => { if (e.target === d || e.target.closest('[data-close]')) d.close(); });
     d.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !d.matches(':modal')) d.close(); });
-    // 시트를 닫으면 열 때 쌓은 기록도 되돌린다(뒤로 가기가 앱을 떠나지 않게)
-    d.addEventListener('close', () => { if (history.state && history.state.sheet === d.id) history.back(); });
+    d.addEventListener('close', () => {
+      if (currentHls) { currentHls.destroy(); currentHls = null; }
+      if (history.state && history.state.sheet === d.id) history.back();
+    });
   });
   window.addEventListener('popstate', () => {
     document.querySelectorAll('dialog.sheet[open]').forEach(d => { if (!(history.state && history.state.sheet === d.id)) d.close(); });
@@ -1317,6 +1375,34 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     else {
       const mk = markerByKey.get(it.key);
       if (mk) mk.bindPopup(`${escapeHtml(it.d.place_name)}<br><span style="font-weight:500">출발 후 ${Math.round(it.km)}km</span>`).openPopup();
+    }
+  }
+
+  // CCTV 실시간 스트리밍 모달 팝업
+  function openCctvModal(item, km) {
+    $('#detailTitle').textContent = item.cctvname || 'CCTV 영상';
+    $('#detailSub').textContent = `출발 후 약 ${Math.round(km)}km 지점 (실시간 HLS 영상)`;
+    $('#detailUsage').hidden = true;
+
+    const video = h('video', { controls: true, autoplay: true, playsinline: true });
+    const container = h('div', { class: 'cctv-player-container' }, video);
+
+    $('#detailBody').replaceChildren(h('section', { class: 'sec' }, container));
+    openSheet('detailSheet');
+
+    const videoUrl = item.cctvurl;
+    if (Hls.isSupported()) {
+      if (currentHls) currentHls.destroy();
+      const hls = new Hls();
+      hls.loadSource(videoUrl);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
+      currentHls = hls;
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = videoUrl;
+      video.addEventListener('loadedmetadata', () => video.play());
+    } else {
+      toast('현재 브라우저에서는 이 CCTV 영상을 재생할 수 없습니다.');
     }
   }
 
@@ -1437,7 +1523,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     lookup('B027', gasEl); lookup('D047', dieselEl);
   }
 
-  /* ── 설정 ─────────────────────────────────────────────── */
+  /* ── 설정 ── */
   const homeInput = $('#homeInput'), homeSuggest = $('#homeSuggest'), foodInput = $('#foodInput');
   function openSettings() {
     const home = getHome(); homeInput.value = home ? home.name : '';
@@ -1495,7 +1581,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     location.reload();
   });
 
-  /* ── 시작 ─────────────────────────────────────────────── */
+  /* ── 시작 ── */
   applyTheme();
   renderEmpty();
   loadData();
