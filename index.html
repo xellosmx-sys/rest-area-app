@@ -21,7 +21,7 @@
   <!-- HLS.js 라이브러리 추가 (모바일/PC 브라우저 HLS 스트리밍 호환) -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
 
-<style>
+  <style>
     /* ── 토큰 ─────────────────────────────────────────── */
     :root {
       --font: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
@@ -207,7 +207,13 @@
       position: relative; z-index: 1000; background: var(--paper); border-top: 1px solid var(--rule-strong);
       display: flex; flex-direction: column; min-height: 0; min-width: 0; max-height: 50dvh;
     }
-    #indexContent.flow { display: contents; }
+    #indexContent {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      flex: 1;
+      width: 100%;
+    }
     body.has-route .stage { grid-template-rows: 38% minmax(0, 1fr); }
     body.has-route.list-large .stage { grid-template-rows: 20% minmax(0, 1fr); }
     body.has-route .index { max-height: none; }
@@ -240,14 +246,18 @@
     }
     .text-btn:hover { background: var(--paper-2); }
 
-    /* 🎯 칩(버튼) 가로 탭 바 레이아웃 수정: 한 화면에 맞추며 터치 스크롤 지원 */
+    /* 🎯 탭 필터 바 가로 스크롤 레이아웃 보완 */
     .chips {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      padding: 4px 12px 10px;
-      overflow-x: auto;
-      white-space: nowrap;
+      display: flex !important;
+      align-items: center !important;
+      gap: 5px !important;
+      padding: 4px 16px 10px !important;
+      overflow-x: auto !important;
+      white-space: nowrap !important;
+      flex-wrap: nowrap !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
       scrollbar-width: none;
       -webkit-overflow-scrolling: touch;
       flex-shrink: 0;
@@ -255,14 +265,14 @@
     .chips::-webkit-scrollbar { display: none; }
 
     .chip {
-      flex-shrink: 0;
-      min-height: 34px;
-      padding: 0 10px;
+      flex-shrink: 0 !important;
+      min-height: 32px;
+      padding: 0 9px;
       border-radius: 18px;
       border: 1px solid var(--rule);
       background: var(--paper-3);
       color: var(--ink-2);
-      font-size: 12.5px;
+      font-size: 12px;
       font-weight: 600;
       display: inline-flex;
       align-items: center;
@@ -1329,7 +1339,7 @@
       body = h('ul', { class: 'list' + (state.enterAnim && !state.extrasLoading ? ' enter' : '') }, rows);
       if (!state.extrasLoading) state.enterAnim = false;
     }
-    box.className = 'flow';
+    box.removeAttribute('class');
     setLegend(isFree ? 'free' : 'main');
     box.replaceChildren(...[head, chips].concat(body).filter(Boolean));
   }
@@ -1364,7 +1374,7 @@
     document.body.classList.remove('has-route', 'list-large', 'editing');
     $('#routeTabs').replaceChildren();
     const home = getHome(), box = $('#indexContent');
-    box.className = '';
+    box.removeAttribute('class');
     box.replaceChildren(h('div', { class: 'empty' },
       h('h2', null, '어디로 가세요?'),
       h('p', null, '경로를 찾으면 내 진행 방향 휴게소만 거리순으로 여기에 적어 드려요.'),
@@ -1378,7 +1388,7 @@
     setTimeout(() => map.invalidateSize(), 60);
   }
   function renderLoading() {
-    const box = $('#indexContent'); box.className = '';
+    const box = $('#indexContent'); box.removeAttribute('class');
     box.replaceChildren(h('div', { class: 'index-head' }, h('p', { class: 'index-title' }, '경로를 찾는 중…')), h('div', { class: 'skel' }), h('div', { class: 'skel' }));
   }
 
