@@ -19,7 +19,7 @@
   <script src="https://unpkg.com/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.js" integrity="sha384-FhPn/2P/fJGhQLeNWDn9B/2Gml2bPOrKJwFqJXgR3xOPYxWg5mYQ5XZdhUSugZT0" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.min.js" integrity="sha384-sj0T8LNfPM3GGoPwyfyPWLkfgcUNuvfMmqMxNrdnuiPT7OiEObjXAd1i4dRaZLQ+" crossorigin="anonymous"></script>
   <!-- HLS.js 라이브러리 추가 (모바일/PC 브라우저 HLS 스트리밍 호환) -->
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
 
   <style>
     /* ── 토큰 ─────────────────────────────────────────── */
@@ -1379,44 +1379,43 @@
   }
 
   // CCTV 실시간 스트리밍 모달 팝업
-function openCctvModal(item, km) {
+  function openCctvModal(item, km) {
     $('#detailTitle').textContent = item.cctvname || 'CCTV 영상';
     $('#detailSub').textContent = `출발 후 약 ${Math.round(km)}km 지점 (실시간 HLS 영상)`;
     $('#detailUsage').hidden = true;
 
-    const video = h('video', { controls: true, autoplay: true, playsinline: true, muted: true });
+    const video = h('video', { controls: true, autoplay: true, playsinline: true });
+    video.muted = true; // 속성이 아니라 프로퍼티로 지정해야 자동재생이 막히지 않음
     const container = h('div', { class: 'cctv-player-container' }, video);
+    const msg = h('p', { class: 'sub', style: 'padding:8px 2px' }, '영상 불러오는 중…');
 
-    $('#detailBody').replaceChildren(h('section', { class: 'sec' }, container));
+    $('#detailBody').replaceChildren(h('section', { class: 'sec' }, container, msg));
     openSheet('detailSheet');
 
-    // 영상 URL을 Worker 스트림 프록시로 전달하도록 변환
-    const origUrl = item.cctvurl;
-    const proxiedUrl = `${CONFIG.API_BASE}/its/stream?url=${encodeURIComponent(origUrl)}`;
+    // Worker가 m3u8 안의 주소를 전부 프록시 주소로 바꿔서 주므로 xhrSetup 불필요
+    const proxiedUrl = `${CONFIG.API_BASE}/its/stream?url=${encodeURIComponent(item.cctvurl)}`;
 
-    if (Hls.isSupported()) {
-      if (currentHls) currentHls.destroy();
-      const hls = new Hls({
-        xhrSetup: function (xhr, url) {
-          // HLS 내부 세그먼트(.ts) 파일 요청도 Worker 프록시를 거치도록 자동 변경
-          if (!url.includes('/its/stream')) {
-            xhr.open('GET', `${CONFIG.API_BASE}/its/stream?url=${encodeURIComponent(url)}`, true);
-          }
+    if (currentHls) { currentHls.destroy(); currentHls = null; }
+    if (window.Hls && Hls.isSupported()) {
+      const hls = new Hls({ manifestLoadingMaxRetry: 2, levelLoadingMaxRetry: 2, fragLoadingMaxRetry: 3 });
+      hls.on(Hls.Events.MANIFEST_PARSED, () => { msg.textContent = ''; video.play().catch(() => {}); });
+      hls.on(Hls.Events.FRAG_LOADED, () => { msg.textContent = ''; });
+      hls.on(Hls.Events.ERROR, (_e, data) => {
+        console.warn('[CCTV HLS]', data.type, data.details, data.response && data.response.code, data.url);
+        if (data.fatal) {
+          msg.textContent = `영상을 불러오지 못했어요 (${data.details}${data.response ? ' / ' + data.response.code : ''})`;
+          hls.destroy(); currentHls = null;
         }
       });
       hls.loadSource(proxiedUrl);
       hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        video.play().catch(() => {});
-      });
       currentHls = hls;
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = proxiedUrl;
-      video.addEventListener('loadedmetadata', () => {
-        video.play().catch(() => {});
-      });
+      video.addEventListener('loadedmetadata', () => { msg.textContent = ''; video.play().catch(() => {}); });
+      video.addEventListener('error', () => { msg.textContent = '영상을 불러오지 못했어요.'; });
     } else {
-      toast('현재 브라우저에서는 이 CCTV 영상을 재생할 수 없습니다.');
+      msg.textContent = '현재 브라우저에서는 이 CCTV 영상을 재생할 수 없습니다.';
     }
   }
 
