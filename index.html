@@ -251,6 +251,8 @@
     .chip-layer::before { content: ""; width: 10px; height: 10px; border-radius: 2px; border: 2px solid var(--ink-3); }
     .chip-layer[aria-pressed="true"] { background: var(--paper-3); color: var(--ink); border: 1px solid var(--ochre); }
     .chip-layer[aria-pressed="true"]::before { border-color: var(--ochre); }
+    .chip-cctv[aria-pressed="true"] { border-color: #2B6CB0; }
+    .chip-cctv[aria-pressed="true"]::before { border-color: #2B6CB0; background: #2B6CB0; }
     .chip, .seg button, .text-btn { position: relative; }
     .chip::after, .seg button::after, .text-btn::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: var(--tap); transform: translateY(-50%); }
     .chip-sep { width: 1px; background: var(--rule); margin: 6px 2px; flex-shrink: 0; }
@@ -783,7 +785,7 @@
     items: [], extrasLoading: false,
     fuel: store.get('pref_fuel', 'ALL'),
     showDrowsy: store.get('pref_show_drowsy', '1') === '1',
-    showCctv: true, // CCTV 표시 활성화
+    showCctv: store.get('pref_show_cctv', '1') === '1', // CCTV 표시 (켜짐/꺼짐 기억)
     me: null, watchId: null,
     run: 0, activeKey: null,
   };
@@ -804,8 +806,8 @@
     else {
       el.append(item('#0E7A55', '휴게소'));
       if (state.showDrowsy) el.append(item('#8A6400', '졸음쉼터', true));
-      el.append(item('#2B6CB0', 'CCTV', true));
     }
+    if (state.showCctv) el.append(item('#2B6CB0', 'CCTV', true));
   }
   const syncFar = () => map.getContainer().classList.toggle('far', map.getZoom() < 9);
   map.on('zoomend', syncFar); syncFar();
@@ -1044,7 +1046,7 @@
     $('#routeTabs').replaceChildren(...state.routes.map((r, i) => h('button', {
       class: 'tab', type: 'button', 'data-kind': r.kind, 'aria-pressed': String(i === state.active),
       onclick: () => { if (i !== state.active) selectRoute(i); },
-    }, h('b', null, r.label), h('span', { class: 'num' }, fmtDuration(r.duration)), h('span', { class: 'num' }, r.toll ? fmtWon(r.toll) : '통행료 무료'))));
+    }, h('b', null, r.label), h('span', { class: 'num' }, fmtDuration(r.duration)), h('span', { class: 'num' }, `${Math.round(r.distance / 1000).toLocaleString('ko-KR')}km`), h('span', { class: 'num' }, r.toll ? fmtWon(r.toll) : '통행료 무료'))));
   }
 
   function drawRoutes() {
@@ -1130,6 +1132,7 @@
     if (!state.showCctv) return;
 
     const rawData = await getItsCctv(g.bbox);
+    if (!state.showCctv || state.geo !== g) return; // 로딩 중 끄거나 다른 경로를 골랐으면 중단
     if (!rawData || !rawData.length) return;
 
     const seen = new Set();
@@ -1279,11 +1282,15 @@
         h('p', { class: 'index-sub' }, isFree ? '오피넷 가격은 눌러서 확인해요' : '진행 방향 오른쪽만 · 유가는 수집 시점 값')),
       h('button', { class: 'text-btn list-toggle', type: 'button', onclick: toggleListSize }, icon(large ? 'expand' : 'list', 'ic ic-sm'), large ? '지도 크게' : '목록 크게'),
     );
-    const chips = isFree ? null : h('div', { class: 'chips', role: 'group', 'aria-label': '연료·표시 거르기' },
-      [['ALL', '전체'], ['GAS', '주유소'], ['LPG', 'LPG'], ['EV', '전기차 충전']].map(([v, label]) =>
-        h('button', { class: 'chip', type: 'button', 'aria-pressed': String(state.fuel === v), onclick: () => { state.fuel = v; store.set('pref_fuel', v); renderIndex(); } }, label)),
-      h('span', { class: 'chip-sep', 'aria-hidden': 'true' }),
-      h('button', { class: 'chip chip-layer', type: 'button', 'aria-pressed': String(state.showDrowsy), onclick: toggleDrowsy }, '졸음쉼터'),
+    const cctvChip = h('button', { class: 'chip chip-layer chip-cctv', type: 'button', 'aria-pressed': String(state.showCctv), onclick: toggleCctv }, 'CCTV');
+    const chips = h('div', { class: 'chips', role: 'group', 'aria-label': '연료·표시 거르기' },
+      isFree ? [] : [
+        ...[['ALL', '전체'], ['GAS', '주유소'], ['LPG', 'LPG'], ['EV', '전기차 충전']].map(([v, label]) =>
+          h('button', { class: 'chip', type: 'button', 'aria-pressed': String(state.fuel === v), onclick: () => { state.fuel = v; store.set('pref_fuel', v); renderIndex(); } }, label)),
+        h('span', { class: 'chip-sep', 'aria-hidden': 'true' }),
+        h('button', { class: 'chip chip-layer', type: 'button', 'aria-pressed': String(state.showDrowsy), onclick: toggleDrowsy }, '졸음쉼터'),
+      ],
+      cctvChip,
     );
 
     let body;
@@ -1310,6 +1317,12 @@
     const route = state.routes[state.active];
     if (state.showDrowsy && route && route.kind !== 'free' && !state.items.some(i => i.kind === 'drowsy')) selectRoute(state.active);
     else renderIndex();
+  }
+  function toggleCctv() {
+    state.showCctv = !state.showCctv; store.set('pref_show_cctv', state.showCctv ? '1' : '0');
+    if (state.showCctv) { if (state.geo) loadCctvItems(state.geo); }
+    else layers.cctv.clearLayers();
+    renderIndex();
   }
   function scrollRowIntoView(key) {
     const el = document.querySelector(`.row[data-key="${CSS.escape(key)}"]`);
