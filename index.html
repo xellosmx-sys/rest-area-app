@@ -270,7 +270,7 @@
       border: 0;
       background: transparent;
       outline: none;
-      font-size: 13px;
+      font-size: 16px; /* 16px 미만이면 아이폰이 입력창을 누를 때 화면을 확대함 */
       font-weight: 600;
     }
     .food-input-wrap input::placeholder {
@@ -288,6 +288,8 @@
       border-radius: 50%;
     }
     .clear-food-btn:hover { color: var(--ink); }
+    .clear-food-btn[hidden] { display: none; }
+    #listContainer { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 
     /* 🎯 탭 필터 바 가로 스크롤 레이아웃 */
     .chips {
@@ -1278,14 +1280,25 @@
     if (!onCenter && (p.km <= 0 || p.km >= g.total)) return null;
     return { item, lat, lng, km: p.km };
   }
-  function ensureCctv(route, g) {
-    if (route.cctv) return route.cctv;
-    const c = route.cctv = { items: [], seen: new Set(), done: false };
-    const chunks = routeChunks(route.coords, g, 0.01);
-    let failed = 0;
-    c.promise = pool(chunks, 4, async (bbox) => {
-      let raw;
-      try { raw = await getItsCctv(bbox); } catch { failed++; return; }
+  function cctvLabel(route) {
+    const c = route && route.cctv;
+    if (!state.showCctv || !c) return 'CCTV';
+    if (!c.done) return 'CCTV …';
+    return `CCTV ${c.items.length}${c.failedBoxes.length ? ' ⚠' : ''}`;
+  }
+  function updateCctvChip() {
+    if (ui.cctvBtn && ui.cctvBtn.isConnected) ui.cctvBtn.textContent = cctvLabel(state.routes[state.active]);
+  }
+  // 구간별로 최대 3번까지 재시도. 끝내 실패한 구간은 c.failedBoxes에 남겨 두었다가 다음 기회에 그 구간만 다시 받음
+  function runCctvChunks(c, route, g, boxes) {
+    const failedNow = [];
+    return pool(boxes, 3, async (bbox) => {
+      let raw = null;
+      for (let a = 0; a < 3 && !raw; a++) {
+        try { raw = await getItsCctv(bbox); } catch (e) { if (a < 2) await new Promise(r => setTimeout(r, 700 * (a + 1))); }
+      }
+      if (!raw) { failedNow.push(bbox); return; }
+      c.raw += raw.length;
       const show = isShownRoute(route);
       for (const item of raw) {
         const it = cctvOnRoute(g, item); if (!it) continue;
@@ -1294,17 +1307,37 @@
         c.items.push(it);
         if (show) addCctvMarker(it);
       }
-    }).then(() => {
+      if (show) updateCctvChip();
+    }).then(() => { c.failedBoxes = failedNow; });
+  }
+  function trackCctv(c, route, promise) {
+    c.done = false;
+    promise.then(() => {
       c.done = true;
-      if (failed && route.cctv === c) route.cctv = null;
+      console.info('[CCTV]', { 구간수: c.total, ITS원본: c.raw, 경로위: c.items.length, 실패구간: c.failedBoxes.length });
+      if (!isShownRoute(route)) return;
+      updateCctvChip();
+      if (c.failedBoxes.length) toast('CCTV 일부 구간을 불러오지 못했어요. 경로를 다시 누르거나 CCTV 버튼을 껐다 켜면 다시 시도해요.');
     });
+  }
+  function ensureCctv(route, g) {
+    if (route.cctv) return route.cctv;
+    const c = route.cctv = { items: [], seen: new Set(), raw: 0, done: false, failedBoxes: [], total: 0 };
+    const boxes = routeChunks(route.coords, g, 0.01);
+    c.total = boxes.length;
+    trackCctv(c, route, runCctvChunks(c, route, g, boxes));
     return c;
   }
   function loadCctvItems(route, g) {
     layers.cctv.clearLayers();
-    if (!state.showCctv || !route) return;
+    if (!state.showCctv || !route) { updateCctvChip(); return; }
     const c = ensureCctv(route, g);
     c.items.forEach(addCctvMarker);
+    if (c.done && c.failedBoxes.length) {
+      const boxes = c.failedBoxes; c.failedBoxes = [];
+      trackCctv(c, route, runCctvChunks(c, route, g, boxes));
+    }
+    updateCctvChip();
   }
 
   async function selectRoute(i) {
@@ -1338,19 +1371,13 @@
     return true;
   }
   
-  // 🎯 경로 휴게소 음식 검색어 일치 여부 검사
+  // 경로 휴게소 음식 검색어 일치 여부 (띄어쓰기·대소문자 무시)
+  const normFood = (v) => String(v || '').toLowerCase().replace(/\s+/g, '');
   function passesFood(a) {
-    const q = (state.searchFood || '').trim().toLowerCase();
+    const q = normFood(state.searchFood);
     if (!q) return true;
-    
-    // 메뉴 목록 검사
-    if (Array.isArray(a.menu_list) && a.menu_list.length) {
-      if (a.menu_list.some(m => m.name && m.name.toLowerCase().includes(q))) return true;
-    }
-    // 대표 음식 검사
-    if (a.best_food && a.best_food.toLowerCase().includes(q)) return true;
-    
-    return false;
+    if (Array.isArray(a.menu_list) && a.menu_list.some(m => m && normFood(m.name).includes(q))) return true;
+    return normFood(a.best_food).includes(q);
   }
 
   function favFood(a) {
@@ -1420,8 +1447,53 @@
       .sort((x, y) => x.km - y.km);
   }
 
- function renderIndex() {
+  /* ── 색인 패널: 틀(검색창·칩)은 한 번만 만들고, 이후에는 값만 갱신 (입력 중 키보드가 닫히지 않도록) ── */
+  const ui = { key: null, title: null, sub: null, toggleBtn: null, input: null, clearBtn: null, fuelBtns: [], drowsyBtn: null, cctvBtn: null, list: null };
+
+  function buildPanel(isFree) {
+    ui.fuelBtns = []; ui.drowsyBtn = null; ui.input = null; ui.clearBtn = null;
+    ui.title = h('p', { class: 'index-title', 'aria-live': 'polite' });
+    ui.sub = h('p', { class: 'index-sub' });
+    ui.toggleBtn = h('button', { class: 'text-btn list-toggle', type: 'button', onclick: toggleListSize });
+    const head = h('div', { class: 'index-head' }, h('div', null, ui.title, ui.sub), ui.toggleBtn);
+
+    let searchBox = null;
+    if (!isFree) {
+      const input = document.createElement('input');
+      input.type = 'text'; input.id = 'foodSearchInput'; input.value = state.searchFood;
+      input.placeholder = '음식 검색 (예: 라면, 우동, 만두)';
+      input.setAttribute('enterkeyhint', 'search'); input.setAttribute('autocomplete', 'off');
+      input.setAttribute('autocapitalize', 'off'); input.setAttribute('aria-label', '휴게소 음식 검색');
+      input.spellcheck = false;
+      input.addEventListener('input', () => { state.searchFood = input.value; renderIndex(); });
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
+      const clearBtn = h('button', { type: 'button', class: 'clear-food-btn', 'aria-label': '검색어 지우기' }, icon('close', 'ic ic-sm'));
+      clearBtn.addEventListener('click', () => { state.searchFood = ''; input.value = ''; renderIndex(); input.focus(); });
+      ui.input = input; ui.clearBtn = clearBtn;
+      searchBox = h('div', { class: 'food-search-box' }, h('div', { class: 'food-input-wrap' }, icon('search', 'ic ic-sm'), input, clearBtn));
+    }
+
+    const chips = h('div', { class: 'chips', role: 'group', 'aria-label': '연료·표시 거르기' });
+    if (!isFree) {
+      [['ALL', '전체'], ['GAS', '주유소'], ['LPG', 'LPG'], ['EV', '전기차 충전']].forEach(([v, label]) => {
+        const b = h('button', { class: 'chip', type: 'button', onclick: () => { state.fuel = v; store.set('pref_fuel', v); renderIndex(); } }, label);
+        b.dataset.fuel = v; ui.fuelBtns.push(b); chips.append(b);
+      });
+      chips.append(h('span', { class: 'chip-sep', 'aria-hidden': 'true' }));
+      ui.drowsyBtn = h('button', { class: 'chip chip-layer', type: 'button', onclick: toggleDrowsy }, '졸음쉼터');
+      chips.append(ui.drowsyBtn);
+    }
+    ui.cctvBtn = h('button', { class: 'chip chip-layer chip-cctv', type: 'button', onclick: toggleCctv }, 'CCTV');
+    chips.append(ui.cctvBtn);
+
+    ui.list = h('div', { id: 'listContainer' });
     const box = $('#indexContent');
+    box.removeAttribute('class');
+    box.replaceChildren(...[head, searchBox, chips, ui.list].filter(Boolean));
+    ui.key = isFree ? 'free' : 'main';
+  }
+
+  function renderIndex() {
     const route = state.routes[state.active]; if (!route) return;
     const items = visibleItems();
     layers.items.clearLayers(); markerByKey.clear();
@@ -1433,82 +1505,31 @@
     });
 
     const isFree = route.kind === 'free';
+    const wantKey = isFree ? 'free' : 'main';
+    if (!ui.list || !ui.list.isConnected || ui.key !== wantKey) { buildPanel(isFree); setLegend(wantKey); }
+
+    // 제목·버튼 상태만 갱신 (입력창은 건드리지 않음)
     const count = (k) => items.filter(i => i.kind === k).length;
-    let title = isFree
+    const searching = !!state.searchFood.trim();
+    const title = isFree
       ? [h('strong', null, `주유소 ${count('gas')}곳`), ' · 무료도로 주변']
-      : [h('strong', null, `휴게소 ${count('rest')}곳`), state.showDrowsy && !state.searchFood.trim() ? ` · 졸음쉼터 ${count('drowsy')}곳` : '', ' · 내 방향'];
+      : [h('strong', null, `휴게소 ${count('rest')}곳`), state.showDrowsy && !searching ? ` · 졸음쉼터 ${count('drowsy')}곳` : '', ' · 내 방향'];
     if (state.extrasLoading) title.push(' · 찾는 중…');
     const large = document.body.classList.contains('list-large');
+    ui.title.replaceChildren(...title);
+    ui.sub.textContent = isFree ? '오피넷 가격은 눌러서 확인해요' : '진행 방향 오른쪽만 · 유가는 수집 시점 값';
+    ui.toggleBtn.replaceChildren(icon(large ? 'expand' : 'list', 'ic ic-sm'), large ? '지도 크게' : '목록 크게');
+    ui.fuelBtns.forEach(b => b.setAttribute('aria-pressed', String(state.fuel === b.dataset.fuel)));
+    if (ui.drowsyBtn) ui.drowsyBtn.setAttribute('aria-pressed', String(state.showDrowsy));
+    ui.cctvBtn.setAttribute('aria-pressed', String(state.showCctv));
+    ui.cctvBtn.textContent = cctvLabel(route);
+    if (ui.clearBtn) ui.clearBtn.hidden = !state.searchFood;
 
-    // 🎯 1. 기존 상부 레이아웃(검색창, 헤더 등)이 이미 존재하는지 확인
-    let foodSearchInput = $('#foodSearchInput');
-
-    if (!foodSearchInput) {
-      // 처음 렌더링할 때만 전체 틀을 생성합니다.
-      const head = h('div', { class: 'index-head' },
-        h('div', null,
-          h('p', { class: 'index-title', id: 'indexTitleText', 'aria-live': 'polite' }, title),
-          h('p', { class: 'index-sub' }, isFree ? '오피넷 가격은 눌러서 확인해요' : '진행 방향 오른쪽만 · 유가는 수집 시점 값')),
-        h('button', { class: 'text-btn list-toggle', type: 'button', onclick: toggleListSize }, icon(large ? 'expand' : 'list', 'ic ic-sm'), large ? '지도 크게' : '목록 크게'),
-      );
-
-      const clearBtn = h('button', {
-        type: 'button', id: 'clearFoodBtn', class: 'clear-food-btn', hidden: !state.searchFood,
-        onclick: () => { 
-          state.searchFood = ''; 
-          if ($('#foodSearchInput')) $('#foodSearchInput').value = '';
-          renderIndex(); 
-        }
-      }, icon('close', 'ic ic-sm'));
-      
-      foodSearchInput = h('input', {
-        type: 'text', id: 'foodSearchInput', placeholder: '휴게소 음식 검색 (예: 라면, 우동, 만두)', value: state.searchFood,
-        oninput: (e) => {
-          state.searchFood = e.target.value;
-          const cBtn = $('#clearFoodBtn');
-          if (cBtn) cBtn.hidden = !state.searchFood;
-          renderIndex(); // 이제 input은 다시 생성되지 않고 목록만 갱신됩니다!
-        }
-      });
-
-      const foodSearchBox = h('div', { class: 'food-search-box' },
-        h('div', { class: 'food-input-wrap' },
-          icon('search', 'ic ic-sm'),
-          foodSearchInput,
-          clearBtn
-        )
-      );
-
-      const cctvChip = h('button', { class: 'chip chip-layer chip-cctv', type: 'button', 'aria-pressed': String(state.showCctv), onclick: toggleCctv }, 'CCTV');
-      const chips = h('div', { class: 'chips', role: 'group', 'aria-label': '연료·표시 거르기' },
-        isFree ? [] : [
-          ...[['ALL', '전체'], ['GAS', '주유소'], ['LPG', 'LPG'], ['EV', '전기차 충전']].map(([v, label]) =>
-            h('button', { class: 'chip', type: 'button', 'aria-pressed': String(state.fuel === v), onclick: () => { state.fuel = v; store.set('pref_fuel', v); renderIndex(); } }, label)),
-          h('span', { class: 'chip-sep', 'aria-hidden': 'true' }),
-          h('button', { class: 'chip chip-layer', type: 'button', 'aria-pressed': String(state.showDrowsy), onclick: toggleDrowsy }, '졸음쉼터'),
-        ],
-        cctvChip,
-      );
-
-      const listBox = h('div', { id: 'listContainer' });
-
-      box.removeAttribute('class');
-      setLegend(isFree ? 'free' : 'main');
-      
-      const topElements = isFree ? [head, chips, listBox] : [head, foodSearchBox, chips, listBox];
-      box.replaceChildren(...topElements.filter(Boolean));
-    } else {
-      // 🎯 2. 이미 UI가 그려져 있다면 상단 제목 텍스트만 변경
-      const titleEl = $('#indexTitleText');
-      if (titleEl) titleEl.replaceChildren(...title);
-    }
-
-    // 🎯 3. 목록(body) 부분만 따로 갱신
+    // 목록 갱신
     let body;
     if (!rows.length && state.extrasLoading) body = [h('div', { class: 'skel' }), h('div', { class: 'skel' }), h('div', { class: 'skel' })];
     else if (!rows.length) {
-      const msg = state.searchFood.trim()
-        ? `'${state.searchFood}' 메뉴를 판매하는 휴게소를 경로 상에서 찾지 못했어요.`
+      const msg = searching ? `'${state.searchFood.trim()}' 메뉴를 파는 휴게소를 이 경로에서 찾지 못했어요.`
         : isFree ? '이 무료도로 주변에서 주유소를 찾지 못했어요.'
         : !state.dataReady ? '휴게소 데이터를 아직 불러오지 못했어요.'
         : state.fuel !== 'ALL' ? '조건에 맞는 휴게소가 없어요. 위에서 \'전체\'를 눌러 보세요.'
@@ -1519,54 +1540,7 @@
       body = h('ul', { class: 'list' + (state.enterAnim && !state.extrasLoading ? ' enter' : '') }, rows);
       if (!state.extrasLoading) state.enterAnim = false;
     }
-
-    const container = $('#listContainer');
-    if (container) {
-      container.replaceChildren(...[].concat(body).filter(Boolean));
-    }
-  }
-    });
-
-    const foodSearchBox = h('div', { class: 'food-search-box' },
-      h('div', { class: 'food-input-wrap' },
-        icon('search', 'ic ic-sm'),
-        foodSearchInput,
-        clearBtn
-      )
-    );
-
-    const cctvChip = h('button', { class: 'chip chip-layer chip-cctv', type: 'button', 'aria-pressed': String(state.showCctv), onclick: toggleCctv }, 'CCTV');
-    const chips = h('div', { class: 'chips', role: 'group', 'aria-label': '연료·표시 거르기' },
-      isFree ? [] : [
-        ...[['ALL', '전체'], ['GAS', '주유소'], ['LPG', 'LPG'], ['EV', '전기차 충전']].map(([v, label]) =>
-          h('button', { class: 'chip', type: 'button', 'aria-pressed': String(state.fuel === v), onclick: () => { state.fuel = v; store.set('pref_fuel', v); renderIndex(); } }, label)),
-        h('span', { class: 'chip-sep', 'aria-hidden': 'true' }),
-        h('button', { class: 'chip chip-layer', type: 'button', 'aria-pressed': String(state.showDrowsy), onclick: toggleDrowsy }, '졸음쉼터'),
-      ],
-      cctvChip,
-    );
-
-    let body;
-    if (!rows.length && state.extrasLoading) body = [h('div', { class: 'skel' }), h('div', { class: 'skel' }), h('div', { class: 'skel' })];
-    else if (!rows.length) {
-      const msg = state.searchFood.trim()
-        ? `'${state.searchFood}' 메뉴를 판매하는 휴게소를 경로 상에서 찾지 못했어요.`
-        : isFree ? '이 무료도로 주변에서 주유소를 찾지 못했어요.'
-        : !state.dataReady ? '휴게소 데이터를 아직 불러오지 못했어요.'
-        : state.fuel !== 'ALL' ? '조건에 맞는 휴게소가 없어요. 위에서 \'전체\'를 눌러 보세요.'
-        : '이 경로에는 고속도로 휴게소가 없어요. 국도 위주 경로일 수 있어요.';
-      body = h('div', { class: 'empty' }, h('p', null, msg));
-    } else {
-      rows.forEach((li, i) => li.style.setProperty('--i', i));
-      body = h('ul', { class: 'list' + (state.enterAnim && !state.extrasLoading ? ' enter' : '') }, rows);
-      if (!state.extrasLoading) state.enterAnim = false;
-    }
-    box.removeAttribute('class');
-    setLegend(isFree ? 'free' : 'main');
-    
-    // 무료도로가 아닐 때만 음식 검색창 노출
-    const topElements = isFree ? [head, chips] : [head, foodSearchBox, chips];
-    box.replaceChildren(...topElements.concat(body).filter(Boolean));
+    ui.list.replaceChildren(...[].concat(body).filter(Boolean));
   }
 
   function toggleListSize() { document.body.classList.toggle('list-large'); renderIndex(); setTimeout(() => map.invalidateSize(), 60); }
