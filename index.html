@@ -18,8 +18,8 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.js" integrity="sha384-FhPn/2P/fJGhQLeNWDn9B/2Gml2bPOrKJwFqJXgR3xOPYxWg5mYQ5XZdhUSugZT0" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.min.js" integrity="sha384-sj0T8LNfPM3GGoPwyfyPWLkfgcUNuvfMmqMxNrdnuiPT7OiEObjXAd1i4dRaZLQ+" crossorigin="anonymous"></script>
-  <!-- HLS.js 라이브러리 추가 -->
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+  <!-- HLS.js 라이브러리 추가 (모바일/PC 브라우저 HLS 스트리밍 호환) -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.7.3"></script>
 
   <style>
     /* ── 토큰 ─────────────────────────────────────────── */
@@ -207,13 +207,7 @@
       position: relative; z-index: 1000; background: var(--paper); border-top: 1px solid var(--rule-strong);
       display: flex; flex-direction: column; min-height: 0; min-width: 0; max-height: 50dvh;
     }
-    #indexContent {
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-      flex: 1;
-      width: 100%;
-    }
+    #indexContent.flow { display: contents; }
     body.has-route .stage { grid-template-rows: 38% minmax(0, 1fr); }
     body.has-route.list-large .stage { grid-template-rows: 20% minmax(0, 1fr); }
     body.has-route .index { max-height: none; }
@@ -246,94 +240,22 @@
     }
     .text-btn:hover { background: var(--paper-2); }
 
-    /* 🎯 음식 검색바 스타일 */
-    .food-search-box {
-      padding: 4px 16px 6px;
-      flex-shrink: 0;
-    }
-    .food-input-wrap {
-      display: flex;
-      align-items: center;
-      height: 36px;
-      background: var(--paper-3);
-      border: 1px solid var(--rule);
-      border-radius: 8px;
-      padding: 0 8px 0 10px;
-      gap: 6px;
-    }
-    .food-input-wrap:focus-within {
-      border-color: var(--green);
-    }
-    .food-input-wrap input {
-      flex: 1;
-      min-width: 0;
-      border: 0;
-      background: transparent;
-      outline: none;
-      font-size: 16px; /* 16px 미만이면 아이폰이 입력창을 누를 때 화면을 확대함 */
-      font-weight: 600;
-    }
-    .food-input-wrap input::placeholder {
-      color: var(--ink-3);
-      font-weight: 500;
-    }
-    .clear-food-btn {
-      border: 0;
-      background: transparent;
-      padding: 2px;
-      color: var(--ink-3);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 50%;
-    }
-    .clear-food-btn:hover { color: var(--ink); }
-    .clear-food-btn[hidden] { display: none; }
-    #listContainer { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-
-    /* 🎯 탭 필터 바 가로 스크롤 레이아웃 */
-    .chips {
-      display: flex !important;
-      align-items: center !important;
-      gap: 5px !important;
-      padding: 0 16px 10px !important;
-      overflow-x: auto !important;
-      white-space: nowrap !important;
-      flex-wrap: nowrap !important;
-      width: 100% !important;
-      max-width: 100% !important;
-      box-sizing: border-box !important;
-      scrollbar-width: none;
-      -webkit-overflow-scrolling: touch;
-      flex-shrink: 0;
-    }
-    .chips::-webkit-scrollbar { display: none; }
-
+    .chips { display: flex; gap: 6px; padding: 4px 16px 10px; overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
     .chip {
-      flex-shrink: 0 !important;
-      min-height: 32px;
-      padding: 0 9px;
-      border-radius: 18px;
-      border: 1px solid var(--rule);
-      background: var(--paper-3);
-      color: var(--ink-2);
-      font-size: 12px;
-      font-weight: 600;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      transition: background .2s var(--ease), color .2s var(--ease), border-color .2s var(--ease), transform .18s var(--ease-press);
+      flex-shrink: 0; min-height: 36px; padding: 0 12px; border-radius: 18px;
+      border: 1px solid var(--rule); background: var(--paper-3); color: var(--ink-2);
+      font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;
+      transition: background .3s var(--ease), color .3s var(--ease), border-color .3s var(--ease), transform .18s var(--ease-press);
     }
     .chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
-    .chip-layer::before { content: ""; width: 8px; height: 8px; border-radius: 2px; border: 2px solid var(--ink-3); flex-shrink: 0; }
+    .chip-layer::before { content: ""; width: 10px; height: 10px; border-radius: 2px; border: 2px solid var(--ink-3); }
     .chip-layer[aria-pressed="true"] { background: var(--paper-3); color: var(--ink); border: 1px solid var(--ochre); }
     .chip-layer[aria-pressed="true"]::before { border-color: var(--ochre); }
     .chip-cctv[aria-pressed="true"] { border-color: #2B6CB0; }
     .chip-cctv[aria-pressed="true"]::before { border-color: #2B6CB0; background: #2B6CB0; }
     .chip, .seg button, .text-btn { position: relative; }
     .chip::after, .seg button::after, .text-btn::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: var(--tap); transform: translateY(-50%); }
-    .chip-sep { width: 1px; height: 16px; background: var(--rule); margin: 0 1px; flex-shrink: 0; }
+    .chip-sep { width: 1px; background: var(--rule); margin: 6px 2px; flex-shrink: 0; }
 
     .list { list-style: none; margin: 0; padding: 0 0 max(16px, env(safe-area-inset-bottom)); overflow-y: auto; flex: 1; min-height: 0; overscroll-behavior: contain; }
     .list > li { border-top: 1px dotted var(--rule); }
@@ -401,7 +323,6 @@
       display: flex; align-items: center; justify-content: center; font-size: 11px;
     }
     .far .mk-cctv { width: 10px; height: 10px; border-width: 1px; font-size: 0; }
-    .far .mk-cctv svg { display: none; }
 
     .far .mk-rest:not(.is-active) { width: 12px; height: 12px; font-size: 0; border-width: 1.5px; }
     .far .mk-gas, .far .mk-drowsy { width: 8px; height: 8px; border-width: 1px; }
@@ -568,7 +489,6 @@
     <symbol id="i-expand" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
     <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></symbol>
     <symbol id="i-camera" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></symbol>
-    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></symbol>
   </svg>
 
   <div class="app">
@@ -672,7 +592,7 @@
           <button class="btn-line" type="button" id="resetBtn">지우기</button>
         </div>
         <div class="set-row">
-          <span class="lbl">최신 버전 받기<span class="hint">저장된 캐시를 비우고 다시 불러와요</span></span>
+          <span class="lbl">최신 버전 받기<span class="hint">저장된 캐시를 비우고 다시 불러와요 · 빌드 PREV-1008</span></span>
           <button class="btn-line" type="button" id="updateBtn">다시 불러오기</button>
         </div>
       </section>
@@ -704,10 +624,7 @@
     REST_MAX_KM: 0.6,
     DROWSY_MAX_KM: 0.6,
     GAS_MAX_KM: 1.5,
-    CCTV_MAX_KM: 0.3,     // 경로 선에서 이 거리 안의 CCTV만 (경로 도로 위의 것만)
-    CCTV_CENTER_KM: 0.05, // 이 거리 안이면 도로 중앙(중앙분리대)으로 보고 방향과 상관없이 표시
-    CCTV_CHUNK_KM: 30,    // CCTV 조회 구간 길이 (경로를 잘라 작은 범위로 조회)
-    CCTV_MAX_CHUNKS: 12,  // 긴 경로에서 요청 수 상한
+    CCTV_MAX_KM: 2.0, // 경로 주변 CCTV 검색 반경 (2km)
   };
   const EV_RATES = { '기후에너지환경부': '약 347원/kWh', '한국전력': '약 347원/kWh', '현대엔지니어링': '약 347원/kWh', '에버온': '약 330원/kWh', '채비(CHAEVI)': '약 340원/kWh' };
   const USAGE_LABEL = { '혼잡': '평소 이용 많음', '보통': '평소 이용 보통', '원활': '평소 이용 적음' };
@@ -804,9 +721,10 @@
       minX: bbox.minLng, maxX: bbox.maxLng,
       minY: bbox.minLat, maxY: bbox.maxLat
     }).toString();
-    const res = await getJSON(`${CONFIG.API_BASE}/its/cctv?${params}`);
-    const data = res && res.response && res.response.data;
-    return Array.isArray(data) ? data : data ? [data] : [];
+    try {
+      const res = await getJSON(`${CONFIG.API_BASE}/its/cctv?${params}`);
+      return (res && res.response && res.response.data) ? res.response.data : [];
+    } catch { return []; }
   }
 
   function apiErrorText(err) {
@@ -838,47 +756,6 @@
     const b = g.bbox;
     return lat >= b.minLat - pad && lat <= b.maxLat + pad && lng >= b.minLng - pad && lng <= b.maxLng + pad;
   }
-  function samplePoints(coords, g, everyKm, cap) {
-    const pts = [coords[0]]; let next = everyKm;
-    for (let i = 1; i < coords.length; i++) if (g.cum[i] >= next) { pts.push(coords[i]); next += everyKm; }
-    pts.push(coords[coords.length - 1]);
-    if (pts.length <= cap) return pts;
-    const step = pts.length / cap; return Array.from({ length: cap }, (_, i) => pts[Math.floor(i * step)]);
-  }
-  const GRID_KM = 1;
-  const gridKey = (cx, cy) => cx * 100000 + cy;
-  function segGrid(g) {
-    if (g.grid) return g.grid;
-    const grid = new Map();
-    for (let i = 0; i < g.xy.length - 1; i++) {
-      const [ax, ay] = g.xy[i], [bx, by] = g.xy[i + 1];
-      const x0 = Math.floor(Math.min(ax, bx) / GRID_KM), x1 = Math.floor(Math.max(ax, bx) / GRID_KM);
-      const y0 = Math.floor(Math.min(ay, by) / GRID_KM), y1 = Math.floor(Math.max(ay, by) / GRID_KM);
-      for (let cx = x0; cx <= x1; cx++) for (let cy = y0; cy <= y1; cy++) {
-        const k = gridKey(cx, cy), cell = grid.get(k);
-        if (cell) cell.push(i); else grid.set(k, [i]);
-      }
-    }
-    return (g.grid = grid);
-  }
-  function projectNear(g, lat, lng, maxKm) {
-    const grid = segGrid(g);
-    const px = lng * g.kx, py = lat * g.ky;
-    const cx = Math.floor(px / GRID_KM), cy = Math.floor(py / GRID_KM), r = Math.ceil(maxKm / GRID_KM);
-    let best = null;
-    for (let x = cx - r; x <= cx + r; x++) for (let y = cy - r; y <= cy + r; y++) {
-      const cell = grid.get(gridKey(x, y)); if (!cell) continue;
-      for (const i of cell) {
-        const [ax, ay] = g.xy[i], [bx, by] = g.xy[i + 1];
-        const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
-        let t = l2 ? ((px - ax) * dx + (py - ay) * dy) / l2 : 0;
-        t = t < 0 ? 0 : t > 1 ? 1 : t;
-        const d = Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
-        if (d <= maxKm && (!best || d < best.dist)) best = { dist: d, km: g.cum[i] + t * Math.sqrt(l2), right: dx * (py - ay) - dy * (px - ax) < 0 };
-      }
-    }
-    return best;
-  }
   function project(g, lat, lng) {
     const px = lng * g.kx, py = lat * g.ky;
     let best = { dist: Infinity, km: 0, right: false };
@@ -892,21 +769,12 @@
     }
     return best;
   }
-  function routeChunks(coords, g, padDeg) {
-    const len = Math.max(CONFIG.CCTV_CHUNK_KM, g.total / CONFIG.CCTV_MAX_CHUNKS);
-    const out = []; let box = null, startKm = 0;
-    for (let i = 0; i < coords.length; i++) {
-      const [la, ln] = coords[i];
-      if (!box) box = { minLat: la, maxLat: la, minLng: ln, maxLng: ln };
-      if (la < box.minLat) box.minLat = la; if (la > box.maxLat) box.maxLat = la;
-      if (ln < box.minLng) box.minLng = ln; if (ln > box.maxLng) box.maxLng = ln;
-      if (g.cum[i] - startKm >= len && i < coords.length - 1) {
-        out.push(box); startKm = g.cum[i];
-        box = { minLat: la, maxLat: la, minLng: ln, maxLng: ln };
-      }
-    }
-    if (box) out.push(box);
-    return out.map(b => ({ minLat: b.minLat - padDeg, maxLat: b.maxLat + padDeg, minLng: b.minLng - padDeg, maxLng: b.maxLng + padDeg }));
+  function samplePoints(coords, g, everyKm, cap) {
+    const pts = [coords[0]]; let next = everyKm;
+    for (let i = 1; i < coords.length; i++) if (g.cum[i] >= next) { pts.push(coords[i]); next += everyKm; }
+    pts.push(coords[coords.length - 1]);
+    if (pts.length <= cap) return pts;
+    const step = pts.length / cap; return Array.from({ length: cap }, (_, i) => pts[Math.floor(i * step)]);
   }
 
   /* ── 상태 ── */
@@ -917,8 +785,7 @@
     items: [], extrasLoading: false,
     fuel: store.get('pref_fuel', 'ALL'),
     showDrowsy: store.get('pref_show_drowsy', '1') === '1',
-    showCctv: store.get('pref_show_cctv', '1') === '1',
-    searchFood: '', // 🎯 경로 상 휴게소 음식 검색어
+    showCctv: store.get('pref_show_cctv', '1') === '1', // CCTV 표시 (켜짐/꺼짐 기억)
     me: null, watchId: null,
     run: 0, activeKey: null,
   };
@@ -962,7 +829,7 @@
     arrows: L.layerGroup().addTo(map),
     ends: L.layerGroup().addTo(map),
     items: L.layerGroup().addTo(map),
-    cctv: L.layerGroup().addTo(map),
+    cctv: L.layerGroup().addTo(map), // CCTV 마커 전용 레이어
     me: L.layerGroup().addTo(map),
   };
   const markerByKey = new Map();
@@ -1170,7 +1037,7 @@
   $('#summaryBtn').addEventListener('click', () => { document.body.classList.add('editing'); setTimeout(() => { map.invalidateSize(); inputs.end.focus(); }, 30); });
 
   function clearRoute() {
-    state.routes = []; state.active = -1; state.items = []; state.geo = null; state.activeKey = null; state.searchFood = '';
+    state.routes = []; state.active = -1; state.items = []; state.geo = null; state.activeKey = null;
     Object.entries(layers).forEach(([k, l]) => { if (k !== 'me') l.clearLayers(); });
     markerByKey.clear(); setLegend(null);
   }
@@ -1260,84 +1127,36 @@
   }
 
   // ITS CCTV 정보 조회 및 지도 표시
-  const CCTV_ICON = L.divIcon({
-    className: 'mk-wrap', iconSize: [22, 22], iconAnchor: [11, 11],
-    html: '<div class="mk mk-cctv"><svg class="ic" style="width:14px;height:14px;stroke:#fff"><use href="#i-camera"/></svg></div>',
-  });
-  const isShownRoute = (route) => state.showCctv && state.routes[state.active] === route;
-  function addCctvMarker(it) {
-    L.marker([it.lat, it.lng], { icon: CCTV_ICON, title: it.item.cctvname || 'CCTV', zIndexOffset: 800 })
-      .on('click', () => openCctvModal(it.item, it.km))
-      .addTo(layers.cctv);
-  }
-  function cctvOnRoute(g, item) {
-    const lat = +item.coordy, lng = +item.coordx;
-    if (!Number.isFinite(lat) || !Number.isFinite(lng) || !inBox(g, lat, lng, 0.01)) return null;
-    const p = projectNear(g, lat, lng, CONFIG.CCTV_MAX_KM);
-    if (!p) return null;
-    const onCenter = p.dist <= CONFIG.CCTV_CENTER_KM;
-    if (!onCenter && !p.right) return null;
-    if (!onCenter && (p.km <= 0 || p.km >= g.total)) return null;
-    return { item, lat, lng, km: p.km };
-  }
-  function cctvLabel(route) {
-    const c = route && route.cctv;
-    if (!state.showCctv || !c) return 'CCTV';
-    if (!c.done) return 'CCTV …';
-    return `CCTV ${c.items.length}${c.failedBoxes.length ? ' ⚠' : ''}`;
-  }
-  function updateCctvChip() {
-    if (ui.cctvBtn && ui.cctvBtn.isConnected) ui.cctvBtn.textContent = cctvLabel(state.routes[state.active]);
-  }
-  // 구간별로 최대 3번까지 재시도. 끝내 실패한 구간은 c.failedBoxes에 남겨 두었다가 다음 기회에 그 구간만 다시 받음
-  function runCctvChunks(c, route, g, boxes) {
-    const failedNow = [];
-    return pool(boxes, 3, async (bbox) => {
-      let raw = null;
-      for (let a = 0; a < 3 && !raw; a++) {
-        try { raw = await getItsCctv(bbox); } catch (e) { if (a < 2) await new Promise(r => setTimeout(r, 700 * (a + 1))); }
-      }
-      if (!raw) { failedNow.push(bbox); return; }
-      c.raw += raw.length;
-      const show = isShownRoute(route);
-      for (const item of raw) {
-        const it = cctvOnRoute(g, item); if (!it) continue;
-        const key = `${item.cctvname}|${it.lat.toFixed(5)}|${it.lng.toFixed(5)}`;
-        if (c.seen.has(key)) continue; c.seen.add(key);
-        c.items.push(it);
-        if (show) addCctvMarker(it);
-      }
-      if (show) updateCctvChip();
-    }).then(() => { c.failedBoxes = failedNow; });
-  }
-  function trackCctv(c, route, promise) {
-    c.done = false;
-    promise.then(() => {
-      c.done = true;
-      console.info('[CCTV]', { 구간수: c.total, ITS원본: c.raw, 경로위: c.items.length, 실패구간: c.failedBoxes.length });
-      if (!isShownRoute(route)) return;
-      updateCctvChip();
-      if (c.failedBoxes.length) toast('CCTV 일부 구간을 불러오지 못했어요. 경로를 다시 누르거나 CCTV 버튼을 껐다 켜면 다시 시도해요.');
-    });
-  }
-  function ensureCctv(route, g) {
-    if (route.cctv) return route.cctv;
-    const c = route.cctv = { items: [], seen: new Set(), raw: 0, done: false, failedBoxes: [], total: 0 };
-    const boxes = routeChunks(route.coords, g, 0.01);
-    c.total = boxes.length;
-    trackCctv(c, route, runCctvChunks(c, route, g, boxes));
-    return c;
-  }
-  function loadCctvItems(route, g) {
+  async function loadCctvItems(g) {
     layers.cctv.clearLayers();
-    if (!state.showCctv || !route) { updateCctvChip(); return; }
-    const c = ensureCctv(route, g);
-    c.items.forEach(addCctvMarker);
-    if (c.done && c.failedBoxes.length) {
-      const boxes = c.failedBoxes; c.failedBoxes = [];
-      trackCctv(c, route, runCctvChunks(c, route, g, boxes));
+    if (!state.showCctv) return;
+
+    const rawData = await getItsCctv(g.bbox);
+    if (!state.showCctv || state.geo !== g) return; // 로딩 중 끄거나 다른 경로를 골랐으면 중단
+    if (!rawData || !rawData.length) return;
+
+    const seen = new Set();
+    for (const item of rawData) {
+      const lat = +item.coordy, lng = +item.coordx;
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+
+      const p = project(g, lat, lng);
+      if (p.dist > CONFIG.CCTV_MAX_KM) continue; // 경로 주변 2km 이내만 수집
+
+      const key = item.cctvurl;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      // CCTV 마커 지도에 생성
+      const iconHtml = `<div class="mk mk-cctv" title="${escapeHtml(item.cctvname)}"><svg class="ic" style="width:14px;height:14px;stroke:#fff"><use href="#i-camera"/></svg></div>`;
+      const m = L.marker([lat, lng], {
+        icon: L.divIcon({ className: 'mk-wrap', html: iconHtml, iconSize: [22, 22], iconAnchor: [11, 11] }),
+        title: item.cctvname,
+        zIndexOffset: 800
+      }).addTo(layers.cctv);
+
+      m.on('click', () => openCctvModal(item, p.km));
     }
-    updateCctvChip();
   }
 
   async function selectRoute(i) {
@@ -1346,14 +1165,14 @@
     const run = ++state.run;
     renderTabs(); drawRoutes();
     const route = state.routes[i];
-    const g = state.geo = route.geo || (route.geo = buildGeo(route.coords));
-
-    loadCctvItems(route, g);
-
+    const g = state.geo = buildGeo(route.coords);
     state.items = route.kind === 'free' ? [] : (state.dataReady ? restItems(g) : []);
     const wantExtras = route.kind === 'free' || state.showDrowsy;
     state.extrasLoading = wantExtras;
     renderIndex();
+
+    // CCTV 불러오기 (비동기)
+    loadCctvItems(g);
 
     if (!wantExtras) return;
     const extras = route.kind === 'free' ? await gasItems(route, g) : await drowsyItems(route, g);
@@ -1370,16 +1189,6 @@
     if (state.fuel === 'EV') return !!a.has_ev || !!(a.ev_detail && a.ev_detail.count);
     return true;
   }
-  
-  // 경로 휴게소 음식 검색어 일치 여부 (띄어쓰기·대소문자 무시)
-  const normFood = (v) => String(v || '').toLowerCase().replace(/\s+/g, '');
-  function passesFood(a) {
-    const q = normFood(state.searchFood);
-    if (!q) return true;
-    if (Array.isArray(a.menu_list) && a.menu_list.some(m => m && normFood(m.name).includes(q))) return true;
-    return normFood(a.best_food).includes(q);
-  }
-
   function favFood(a) {
     const pref = (store.get('pref_food', '') || '').trim();
     if (!pref || !a.menu_list) return null;
@@ -1442,58 +1251,13 @@
 
   function visibleItems() {
     return state.items
-      .filter(it => it.kind !== 'rest' || (passesFuel(it.a) && passesFood(it.a)))
-      .filter(it => it.kind !== 'drowsy' || (state.showDrowsy && !state.searchFood.trim())) // 음식 검색 시 졸음쉼터 제외
+      .filter(it => it.kind !== 'rest' || passesFuel(it.a))
+      .filter(it => it.kind !== 'drowsy' || state.showDrowsy)
       .sort((x, y) => x.km - y.km);
   }
 
-  /* ── 색인 패널: 틀(검색창·칩)은 한 번만 만들고, 이후에는 값만 갱신 (입력 중 키보드가 닫히지 않도록) ── */
-  const ui = { key: null, title: null, sub: null, toggleBtn: null, input: null, clearBtn: null, fuelBtns: [], drowsyBtn: null, cctvBtn: null, list: null };
-
-  function buildPanel(isFree) {
-    ui.fuelBtns = []; ui.drowsyBtn = null; ui.input = null; ui.clearBtn = null;
-    ui.title = h('p', { class: 'index-title', 'aria-live': 'polite' });
-    ui.sub = h('p', { class: 'index-sub' });
-    ui.toggleBtn = h('button', { class: 'text-btn list-toggle', type: 'button', onclick: toggleListSize });
-    const head = h('div', { class: 'index-head' }, h('div', null, ui.title, ui.sub), ui.toggleBtn);
-
-    let searchBox = null;
-    if (!isFree) {
-      const input = document.createElement('input');
-      input.type = 'text'; input.id = 'foodSearchInput'; input.value = state.searchFood;
-      input.placeholder = '음식 검색 (예: 라면, 우동, 만두)';
-      input.setAttribute('enterkeyhint', 'search'); input.setAttribute('autocomplete', 'off');
-      input.setAttribute('autocapitalize', 'off'); input.setAttribute('aria-label', '휴게소 음식 검색');
-      input.spellcheck = false;
-      input.addEventListener('input', () => { state.searchFood = input.value; renderIndex(); });
-      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') input.blur(); });
-      const clearBtn = h('button', { type: 'button', class: 'clear-food-btn', 'aria-label': '검색어 지우기' }, icon('close', 'ic ic-sm'));
-      clearBtn.addEventListener('click', () => { state.searchFood = ''; input.value = ''; renderIndex(); input.focus(); });
-      ui.input = input; ui.clearBtn = clearBtn;
-      searchBox = h('div', { class: 'food-search-box' }, h('div', { class: 'food-input-wrap' }, icon('search', 'ic ic-sm'), input, clearBtn));
-    }
-
-    const chips = h('div', { class: 'chips', role: 'group', 'aria-label': '연료·표시 거르기' });
-    if (!isFree) {
-      [['ALL', '전체'], ['GAS', '주유소'], ['LPG', 'LPG'], ['EV', '전기차 충전']].forEach(([v, label]) => {
-        const b = h('button', { class: 'chip', type: 'button', onclick: () => { state.fuel = v; store.set('pref_fuel', v); renderIndex(); } }, label);
-        b.dataset.fuel = v; ui.fuelBtns.push(b); chips.append(b);
-      });
-      chips.append(h('span', { class: 'chip-sep', 'aria-hidden': 'true' }));
-      ui.drowsyBtn = h('button', { class: 'chip chip-layer', type: 'button', onclick: toggleDrowsy }, '졸음쉼터');
-      chips.append(ui.drowsyBtn);
-    }
-    ui.cctvBtn = h('button', { class: 'chip chip-layer chip-cctv', type: 'button', onclick: toggleCctv }, 'CCTV');
-    chips.append(ui.cctvBtn);
-
-    ui.list = h('div', { id: 'listContainer' });
-    const box = $('#indexContent');
-    box.removeAttribute('class');
-    box.replaceChildren(...[head, searchBox, chips, ui.list].filter(Boolean));
-    ui.key = isFree ? 'free' : 'main';
-  }
-
   function renderIndex() {
+    const box = $('#indexContent');
     const route = state.routes[state.active]; if (!route) return;
     const items = visibleItems();
     layers.items.clearLayers(); markerByKey.clear();
@@ -1505,32 +1269,34 @@
     });
 
     const isFree = route.kind === 'free';
-    const wantKey = isFree ? 'free' : 'main';
-    if (!ui.list || !ui.list.isConnected || ui.key !== wantKey) { buildPanel(isFree); setLegend(wantKey); }
-
-    // 제목·버튼 상태만 갱신 (입력창은 건드리지 않음)
     const count = (k) => items.filter(i => i.kind === k).length;
-    const searching = !!state.searchFood.trim();
     const title = isFree
       ? [h('strong', null, `주유소 ${count('gas')}곳`), ' · 무료도로 주변']
-      : [h('strong', null, `휴게소 ${count('rest')}곳`), state.showDrowsy && !searching ? ` · 졸음쉼터 ${count('drowsy')}곳` : '', ' · 내 방향'];
+      : [h('strong', null, `휴게소 ${count('rest')}곳`), state.showDrowsy ? ` · 졸음쉼터 ${count('drowsy')}곳` : '', ' · 내 방향'];
     if (state.extrasLoading) title.push(' · 찾는 중…');
     const large = document.body.classList.contains('list-large');
-    ui.title.replaceChildren(...title);
-    ui.sub.textContent = isFree ? '오피넷 가격은 눌러서 확인해요' : '진행 방향 오른쪽만 · 유가는 수집 시점 값';
-    ui.toggleBtn.replaceChildren(icon(large ? 'expand' : 'list', 'ic ic-sm'), large ? '지도 크게' : '목록 크게');
-    ui.fuelBtns.forEach(b => b.setAttribute('aria-pressed', String(state.fuel === b.dataset.fuel)));
-    if (ui.drowsyBtn) ui.drowsyBtn.setAttribute('aria-pressed', String(state.showDrowsy));
-    ui.cctvBtn.setAttribute('aria-pressed', String(state.showCctv));
-    ui.cctvBtn.textContent = cctvLabel(route);
-    if (ui.clearBtn) ui.clearBtn.hidden = !state.searchFood;
 
-    // 목록 갱신
+    const head = h('div', { class: 'index-head' },
+      h('div', null,
+        h('p', { class: 'index-title', 'aria-live': 'polite' }, title),
+        h('p', { class: 'index-sub' }, isFree ? '오피넷 가격은 눌러서 확인해요' : '진행 방향 오른쪽만 · 유가는 수집 시점 값')),
+      h('button', { class: 'text-btn list-toggle', type: 'button', onclick: toggleListSize }, icon(large ? 'expand' : 'list', 'ic ic-sm'), large ? '지도 크게' : '목록 크게'),
+    );
+    const cctvChip = h('button', { class: 'chip chip-layer chip-cctv', type: 'button', 'aria-pressed': String(state.showCctv), onclick: toggleCctv }, 'CCTV');
+    const chips = h('div', { class: 'chips', role: 'group', 'aria-label': '연료·표시 거르기' },
+      isFree ? [] : [
+        ...[['ALL', '전체'], ['GAS', '주유소'], ['LPG', 'LPG'], ['EV', '전기차 충전']].map(([v, label]) =>
+          h('button', { class: 'chip', type: 'button', 'aria-pressed': String(state.fuel === v), onclick: () => { state.fuel = v; store.set('pref_fuel', v); renderIndex(); } }, label)),
+        h('span', { class: 'chip-sep', 'aria-hidden': 'true' }),
+        h('button', { class: 'chip chip-layer', type: 'button', 'aria-pressed': String(state.showDrowsy), onclick: toggleDrowsy }, '졸음쉼터'),
+      ],
+      cctvChip,
+    );
+
     let body;
     if (!rows.length && state.extrasLoading) body = [h('div', { class: 'skel' }), h('div', { class: 'skel' }), h('div', { class: 'skel' })];
     else if (!rows.length) {
-      const msg = searching ? `'${state.searchFood.trim()}' 메뉴를 파는 휴게소를 이 경로에서 찾지 못했어요.`
-        : isFree ? '이 무료도로 주변에서 주유소를 찾지 못했어요.'
+      const msg = isFree ? '이 무료도로 주변에서 주유소를 찾지 못했어요.'
         : !state.dataReady ? '휴게소 데이터를 아직 불러오지 못했어요.'
         : state.fuel !== 'ALL' ? '조건에 맞는 휴게소가 없어요. 위에서 \'전체\'를 눌러 보세요.'
         : '이 경로에는 고속도로 휴게소가 없어요. 국도 위주 경로일 수 있어요.';
@@ -1540,7 +1306,9 @@
       body = h('ul', { class: 'list' + (state.enterAnim && !state.extrasLoading ? ' enter' : '') }, rows);
       if (!state.extrasLoading) state.enterAnim = false;
     }
-    ui.list.replaceChildren(...[].concat(body).filter(Boolean));
+    box.className = 'flow';
+    setLegend(isFree ? 'free' : 'main');
+    box.replaceChildren(...[head, chips].concat(body).filter(Boolean));
   }
 
   function toggleListSize() { document.body.classList.toggle('list-large'); renderIndex(); setTimeout(() => map.invalidateSize(), 60); }
@@ -1552,7 +1320,7 @@
   }
   function toggleCctv() {
     state.showCctv = !state.showCctv; store.set('pref_show_cctv', state.showCctv ? '1' : '0');
-    if (state.showCctv) { if (state.geo) loadCctvItems(state.routes[state.active], state.geo); }
+    if (state.showCctv) { if (state.geo) loadCctvItems(state.geo); }
     else layers.cctv.clearLayers();
     renderIndex();
   }
@@ -1573,7 +1341,7 @@
     document.body.classList.remove('has-route', 'list-large', 'editing');
     $('#routeTabs').replaceChildren();
     const home = getHome(), box = $('#indexContent');
-    box.removeAttribute('class');
+    box.className = '';
     box.replaceChildren(h('div', { class: 'empty' },
       h('h2', null, '어디로 가세요?'),
       h('p', null, '경로를 찾으면 내 진행 방향 휴게소만 거리순으로 여기에 적어 드려요.'),
@@ -1587,7 +1355,7 @@
     setTimeout(() => map.invalidateSize(), 60);
   }
   function renderLoading() {
-    const box = $('#indexContent'); box.removeAttribute('class');
+    const box = $('#indexContent'); box.className = '';
     box.replaceChildren(h('div', { class: 'index-head' }, h('p', { class: 'index-title' }, '경로를 찾는 중…')), h('div', { class: 'skel' }), h('div', { class: 'skel' }));
   }
 
@@ -1630,13 +1398,14 @@
     $('#detailUsage').hidden = true;
 
     const video = h('video', { controls: true, autoplay: true, playsinline: true });
-    video.muted = true;
+    video.muted = true; // 속성이 아니라 프로퍼티로 지정해야 자동재생이 막히지 않음
     const container = h('div', { class: 'cctv-player-container' }, video);
     const msg = h('p', { class: 'sub', style: 'padding:8px 2px' }, '영상 불러오는 중…');
 
     $('#detailBody').replaceChildren(h('section', { class: 'sec' }, container, msg));
     openSheet('detailSheet');
 
+    // Worker가 m3u8 안의 주소를 전부 프록시 주소로 바꿔서 주므로 xhrSetup 불필요
     const proxiedUrl = `${CONFIG.API_BASE}/its/stream?url=${encodeURIComponent(item.cctvurl)}`;
 
     if (currentHls) { currentHls.destroy(); currentHls = null; }
@@ -1826,7 +1595,7 @@
 
   function resetApp() {
     state.run++; state.extrasLoading = false; clearRoute();
-    document.querySelectorAll('dialog.sheet[open]').forEach(d => d.close());
+    document.querySelectorAll('dialog.sheet[open]').forEach(d => d.close()); // 열려 있는 설정·상세·CCTV 창 닫기
     document.querySelectorAll('.suggest').forEach(el => { el.hidden = true; el.replaceChildren(); });
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
     setPlace('start', null); setPlace('end', null);
