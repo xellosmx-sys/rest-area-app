@@ -1,8 +1,10 @@
 // 쉬어갈카 서비스워커 — 버전을 올리면 옛 캐시를 지운다.
-// 변경점: ① 버전 v4로 올려 옛 저장본 정리  ② 화면(HTML)을 받을 때 브라우저 임시 저장본을 건너뛰고 서버에 확인  ③ 받은 최신 화면을 오프라인용 저장본에도 갱신
-const CACHE = 'shigeo-v4';
+// v5로 버전업
+const CACHE = 'shigeo-v5';
 const SHELL = ['./', './index.html', './manifest.json', './rest_areas_master.json'];
 const CDN = ['unpkg.com', 'cdnjs.cloudflare.com', 'cdn.jsdelivr.net'];
+
+// ... (이하 기존 sw_5.js 코드 동일)
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();
