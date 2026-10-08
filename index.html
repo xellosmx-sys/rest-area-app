@@ -1420,7 +1420,7 @@
       .sort((x, y) => x.km - y.km);
   }
 
-  function renderIndex() {
+ function renderIndex() {
     const box = $('#indexContent');
     const route = state.routes[state.active]; if (!route) return;
     const items = visibleItems();
@@ -1440,26 +1440,91 @@
     if (state.extrasLoading) title.push(' · 찾는 중…');
     const large = document.body.classList.contains('list-large');
 
-    const head = h('div', { class: 'index-head' },
-      h('div', null,
-        h('p', { class: 'index-title', 'aria-live': 'polite' }, title),
-        h('p', { class: 'index-sub' }, isFree ? '오피넷 가격은 눌러서 확인해요' : '진행 방향 오른쪽만 · 유가는 수집 시점 값')),
-      h('button', { class: 'text-btn list-toggle', type: 'button', onclick: toggleListSize }, icon(large ? 'expand' : 'list', 'ic ic-sm'), large ? '지도 크게' : '목록 크게'),
-    );
+    // 🎯 1. 기존 상부 레이아웃(검색창, 헤더 등)이 이미 존재하는지 확인
+    let foodSearchInput = $('#foodSearchInput');
 
-    // 🎯 경로 내 음식 검색창 DOM 생성
-    const clearBtn = h('button', {
-      type: 'button', class: 'clear-food-btn', hidden: !state.searchFood,
-      onclick: () => { state.searchFood = ''; renderIndex(); }
-    }, icon('close', 'ic ic-sm'));
-    
-    const foodSearchInput = h('input', {
-      type: 'text', placeholder: '휴게소 음식 검색 (예: 라면, 우동, 만두)', value: state.searchFood,
-      oninput: (e) => {
-        state.searchFood = e.target.value;
-        clearBtn.hidden = !state.searchFood;
-        renderIndex();
-      }
+    if (!foodSearchInput) {
+      // 처음 렌더링할 때만 전체 틀을 생성합니다.
+      const head = h('div', { class: 'index-head' },
+        h('div', null,
+          h('p', { class: 'index-title', id: 'indexTitleText', 'aria-live': 'polite' }, title),
+          h('p', { class: 'index-sub' }, isFree ? '오피넷 가격은 눌러서 확인해요' : '진행 방향 오른쪽만 · 유가는 수집 시점 값')),
+        h('button', { class: 'text-btn list-toggle', type: 'button', onclick: toggleListSize }, icon(large ? 'expand' : 'list', 'ic ic-sm'), large ? '지도 크게' : '목록 크게'),
+      );
+
+      const clearBtn = h('button', {
+        type: 'button', id: 'clearFoodBtn', class: 'clear-food-btn', hidden: !state.searchFood,
+        onclick: () => { 
+          state.searchFood = ''; 
+          if ($('#foodSearchInput')) $('#foodSearchInput').value = '';
+          renderIndex(); 
+        }
+      }, icon('close', 'ic ic-sm'));
+      
+      foodSearchInput = h('input', {
+        type: 'text', id: 'foodSearchInput', placeholder: '휴게소 음식 검색 (예: 라면, 우동, 만두)', value: state.searchFood,
+        oninput: (e) => {
+          state.searchFood = e.target.value;
+          const cBtn = $('#clearFoodBtn');
+          if (cBtn) cBtn.hidden = !state.searchFood;
+          renderIndex(); // 이제 input은 다시 생성되지 않고 목록만 갱신됩니다!
+        }
+      });
+
+      const foodSearchBox = h('div', { class: 'food-search-box' },
+        h('div', { class: 'food-input-wrap' },
+          icon('search', 'ic ic-sm'),
+          foodSearchInput,
+          clearBtn
+        )
+      );
+
+      const cctvChip = h('button', { class: 'chip chip-layer chip-cctv', type: 'button', 'aria-pressed': String(state.showCctv), onclick: toggleCctv }, 'CCTV');
+      const chips = h('div', { class: 'chips', role: 'group', 'aria-label': '연료·표시 거르기' },
+        isFree ? [] : [
+          ...[['ALL', '전체'], ['GAS', '주유소'], ['LPG', 'LPG'], ['EV', '전기차 충전']].map(([v, label]) =>
+            h('button', { class: 'chip', type: 'button', 'aria-pressed': String(state.fuel === v), onclick: () => { state.fuel = v; store.set('pref_fuel', v); renderIndex(); } }, label)),
+          h('span', { class: 'chip-sep', 'aria-hidden': 'true' }),
+          h('button', { class: 'chip chip-layer', type: 'button', 'aria-pressed': String(state.showDrowsy), onclick: toggleDrowsy }, '졸음쉼터'),
+        ],
+        cctvChip,
+      );
+
+      const listBox = h('div', { id: 'listContainer' });
+
+      box.removeAttribute('class');
+      setLegend(isFree ? 'free' : 'main');
+      
+      const topElements = isFree ? [head, chips, listBox] : [head, foodSearchBox, chips, listBox];
+      box.replaceChildren(...topElements.filter(Boolean));
+    } else {
+      // 🎯 2. 이미 UI가 그려져 있다면 상단 제목 텍스트만 변경
+      const titleEl = $('#indexTitleText');
+      if (titleEl) titleEl.replaceChildren(...title);
+    }
+
+    // 🎯 3. 목록(body) 부분만 따로 갱신
+    let body;
+    if (!rows.length && state.extrasLoading) body = [h('div', { class: 'skel' }), h('div', { class: 'skel' }), h('div', { class: 'skel' })];
+    else if (!rows.length) {
+      const msg = state.searchFood.trim()
+        ? `'${state.searchFood}' 메뉴를 판매하는 휴게소를 경로 상에서 찾지 못했어요.`
+        : isFree ? '이 무료도로 주변에서 주유소를 찾지 못했어요.'
+        : !state.dataReady ? '휴게소 데이터를 아직 불러오지 못했어요.'
+        : state.fuel !== 'ALL' ? '조건에 맞는 휴게소가 없어요. 위에서 \'전체\'를 눌러 보세요.'
+        : '이 경로에는 고속도로 휴게소가 없어요. 국도 위주 경로일 수 있어요.';
+      body = h('div', { class: 'empty' }, h('p', null, msg));
+    } else {
+      rows.forEach((li, i) => li.style.setProperty('--i', i));
+      body = h('ul', { class: 'list' + (state.enterAnim && !state.extrasLoading ? ' enter' : '') }, rows);
+      if (!state.extrasLoading) state.enterAnim = false;
+    }
+
+    const container = $('#listContainer');
+    if (container) {
+      container.replaceChildren(...[].concat(body).filter(Boolean));
+    }
+  }
     });
 
     const foodSearchBox = h('div', { class: 'food-search-box' },
