@@ -1729,7 +1729,21 @@
   applyTheme();
   renderEmpty();
   loadData();
-  if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+// 서비스 워커가 새 버전으로 설치되었을 때 즉시 화면 새로고침
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').then(reg => {
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'activated' && navigator.serviceWorker.controller) {
+              window.location.reload(); // 강제 새로고침
+            }
+          });
+        });
+      }).catch(() => {});
+    });
+  }
   </script>
 </body>
 </html>
