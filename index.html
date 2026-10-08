@@ -19,7 +19,7 @@
   <script src="https://unpkg.com/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.js" integrity="sha384-FhPn/2P/fJGhQLeNWDn9B/2Gml2bPOrKJwFqJXgR3xOPYxWg5mYQ5XZdhUSugZT0" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.min.js" integrity="sha384-sj0T8LNfPM3GGoPwyfyPWLkfgcUNuvfMmqMxNrdnuiPT7OiEObjXAd1i4dRaZLQ+" crossorigin="anonymous"></script>
   <!-- HLS.js 라이브러리 추가 (모바일/PC 브라우저 HLS 스트리밍 호환) -->
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.7.3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
 
   <style>
     /* ── 토큰 ─────────────────────────────────────────── */
@@ -207,7 +207,13 @@
       position: relative; z-index: 1000; background: var(--paper); border-top: 1px solid var(--rule-strong);
       display: flex; flex-direction: column; min-height: 0; min-width: 0; max-height: 50dvh;
     }
-    #indexContent.flow { display: contents; }
+    #indexContent {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      flex: 1;
+      width: 100%;
+    }
     body.has-route .stage { grid-template-rows: 38% minmax(0, 1fr); }
     body.has-route.list-large .stage { grid-template-rows: 20% minmax(0, 1fr); }
     body.has-route .index { max-height: none; }
@@ -240,22 +246,49 @@
     }
     .text-btn:hover { background: var(--paper-2); }
 
-    .chips { display: flex; gap: 6px; padding: 4px 16px 10px; overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
+    /* 🎯 탭 필터 바 가로 스크롤 레이아웃 보완 */
+    .chips {
+      display: flex !important;
+      align-items: center !important;
+      gap: 5px !important;
+      padding: 4px 16px 10px !important;
+      overflow-x: auto !important;
+      white-space: nowrap !important;
+      flex-wrap: nowrap !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+      flex-shrink: 0;
+    }
+    .chips::-webkit-scrollbar { display: none; }
+
     .chip {
-      flex-shrink: 0; min-height: 36px; padding: 0 12px; border-radius: 18px;
-      border: 1px solid var(--rule); background: var(--paper-3); color: var(--ink-2);
-      font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;
-      transition: background .3s var(--ease), color .3s var(--ease), border-color .3s var(--ease), transform .18s var(--ease-press);
+      flex-shrink: 0 !important;
+      min-height: 32px;
+      padding: 0 9px;
+      border-radius: 18px;
+      border: 1px solid var(--rule);
+      background: var(--paper-3);
+      color: var(--ink-2);
+      font-size: 12px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      transition: background .2s var(--ease), color .2s var(--ease), border-color .2s var(--ease), transform .18s var(--ease-press);
     }
     .chip[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
-    .chip-layer::before { content: ""; width: 10px; height: 10px; border-radius: 2px; border: 2px solid var(--ink-3); }
+    .chip-layer::before { content: ""; width: 8px; height: 8px; border-radius: 2px; border: 2px solid var(--ink-3); flex-shrink: 0; }
     .chip-layer[aria-pressed="true"] { background: var(--paper-3); color: var(--ink); border: 1px solid var(--ochre); }
     .chip-layer[aria-pressed="true"]::before { border-color: var(--ochre); }
     .chip-cctv[aria-pressed="true"] { border-color: #2B6CB0; }
     .chip-cctv[aria-pressed="true"]::before { border-color: #2B6CB0; background: #2B6CB0; }
     .chip, .seg button, .text-btn { position: relative; }
     .chip::after, .seg button::after, .text-btn::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: var(--tap); transform: translateY(-50%); }
-    .chip-sep { width: 1px; background: var(--rule); margin: 6px 2px; flex-shrink: 0; }
+    .chip-sep { width: 1px; height: 16px; background: var(--rule); margin: 0 1px; flex-shrink: 0; }
 
     .list { list-style: none; margin: 0; padding: 0 0 max(16px, env(safe-area-inset-bottom)); overflow-y: auto; flex: 1; min-height: 0; overscroll-behavior: contain; }
     .list > li { border-top: 1px dotted var(--rule); }
@@ -592,7 +625,7 @@
           <button class="btn-line" type="button" id="resetBtn">지우기</button>
         </div>
         <div class="set-row">
-          <span class="lbl">최신 버전 받기<span class="hint">저장된 캐시를 비우고 다시 불러와요 · 빌드 PREV-1008</span></span>
+          <span class="lbl">최신 버전 받기<span class="hint">저장된 캐시를 비우고 다시 불러와요</span></span>
           <button class="btn-line" type="button" id="updateBtn">다시 불러오기</button>
         </div>
       </section>
@@ -1306,7 +1339,7 @@
       body = h('ul', { class: 'list' + (state.enterAnim && !state.extrasLoading ? ' enter' : '') }, rows);
       if (!state.extrasLoading) state.enterAnim = false;
     }
-    box.className = 'flow';
+    box.removeAttribute('class');
     setLegend(isFree ? 'free' : 'main');
     box.replaceChildren(...[head, chips].concat(body).filter(Boolean));
   }
@@ -1341,7 +1374,7 @@
     document.body.classList.remove('has-route', 'list-large', 'editing');
     $('#routeTabs').replaceChildren();
     const home = getHome(), box = $('#indexContent');
-    box.className = '';
+    box.removeAttribute('class');
     box.replaceChildren(h('div', { class: 'empty' },
       h('h2', null, '어디로 가세요?'),
       h('p', null, '경로를 찾으면 내 진행 방향 휴게소만 거리순으로 여기에 적어 드려요.'),
@@ -1355,7 +1388,7 @@
     setTimeout(() => map.invalidateSize(), 60);
   }
   function renderLoading() {
-    const box = $('#indexContent'); box.className = '';
+    const box = $('#indexContent'); box.removeAttribute('class');
     box.replaceChildren(h('div', { class: 'index-head' }, h('p', { class: 'index-title' }, '경로를 찾는 중…')), h('div', { class: 'skel' }), h('div', { class: 'skel' }));
   }
 
