@@ -1,5 +1,6 @@
 // 쉬어갈카 서비스워커 — 버전을 올리면 옛 캐시를 지운다.
-const CACHE = 'shigeo-v3';
+// 변경점: ① 버전 v4로 올려 옛 저장본 정리  ② 화면(HTML)을 받을 때 브라우저 임시 저장본을 건너뛰고 서버에 확인  ③ 받은 최신 화면을 오프라인용 저장본에도 갱신
+const CACHE = 'shigeo-v4';
 const SHELL = ['./', './index.html', './manifest.json', './rest_areas_master.json'];
 const CDN = ['unpkg.com', 'cdnjs.cloudflare.com', 'cdn.jsdelivr.net'];
 
@@ -21,9 +22,16 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
 
-  // 화면: 네트워크 먼저, 끊기면 저장본
+  // 화면: 네트워크 먼저(서버에 새 파일이 있는지 매번 확인), 끊기면 저장본
   if (req.mode === 'navigate') {
-    e.respondWith(fetch(req).catch(() => caches.match('./index.html')));
+    e.respondWith(
+      fetch(req, { cache: 'no-cache' })
+        .then((res) => {
+          if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put('./index.html', copy)); }
+          return res;
+        })
+        .catch(() => caches.match('./index.html'))
+    );
     return;
   }
   // 휴게소 데이터: 저장본을 먼저 보여 주고 뒤에서 갱신
