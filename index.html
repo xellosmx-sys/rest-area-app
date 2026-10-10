@@ -19,7 +19,7 @@
   <script src="https://unpkg.com/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.js" integrity="sha384-FhPn/2P/fJGhQLeNWDn9B/2Gml2bPOrKJwFqJXgR3xOPYxWg5mYQ5XZdhUSugZT0" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.9.0/proj4.min.js" integrity="sha384-sj0T8LNfPM3GGoPwyfyPWLkfgcUNuvfMmqMxNrdnuiPT7OiEObjXAd1i4dRaZLQ+" crossorigin="anonymous"></script>
   <!-- HLS.js 라이브러리 추가 (모바일/PC 브라우저 HLS 스트리밍 호환) -->
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.7.3"></script>
 
   <style>
     /* ── 토큰 ─────────────────────────────────────────── */
@@ -626,7 +626,7 @@
           <button class="btn-line" type="button" id="resetBtn">지우기</button>
         </div>
         <div class="set-row">
-          <span class="lbl">최신 버전 받기<span class="hint">저장된 캐시를 비우고 다시 불러와요</span></span>
+          <span class="lbl">최신 버전 받기<span class="hint">저장된 캐시를 비우고 다시 불러와요 · 빌드 CCTV-NEW-1010c</span></span>
           <button class="btn-line" type="button" id="updateBtn">다시 불러오기</button>
         </div>
       </section>
@@ -658,10 +658,6 @@
     REST_MAX_KM: 0.6,
     DROWSY_MAX_KM: 0.6,
     GAS_MAX_KM: 1.5,
-    CCTV_MAX_KM: 0.3,     // 경로 선에서 이 거리 안의 CCTV만 (경로 도로 위의 것만)
-    CCTV_CENTER_KM: 0.05, // 이 거리 안이면 도로 중앙(중앙분리대)으로 보고 방향과 상관없이 표시
-    CCTV_CHUNK_KM: 30,    // CCTV 조회 구간 길이 (경로를 잘라 작은 범위로 조회)
-    CCTV_MAX_CHUNKS: 12,  // 긴 경로에서 요청 수 상한
   };
   const EV_RATES = { '기후에너지환경부': '약 347원/kWh', '한국전력': '약 347원/kWh', '현대엔지니어링': '약 347원/kWh', '에버온': '약 330원/kWh', '채비(CHAEVI)': '약 340원/kWh' };
   const USAGE_LABEL = { '혼잡': '평소 이용 많음', '보통': '평소 이용 보통', '원활': '평소 이용 적음' };
@@ -751,18 +747,6 @@
     const wrap = await getJSON(`https://api.allorigins.win/get?url=${encodeURIComponent(target)}`);
     return JSON.parse(wrap.contents);
   }
-  // ITS CCTV API 프록시 호출 (실패하면 throw → 호출한 쪽에서 재시도 여부 판단)
-  async function getItsCctv(bbox) {
-    if (!CONFIG.API_BASE) return [];
-    const params = new URLSearchParams({
-      minX: bbox.minLng, maxX: bbox.maxLng,
-      minY: bbox.minLat, maxY: bbox.maxLat
-    }).toString();
-    const res = await getJSON(`${CONFIG.API_BASE}/its/cctv?${params}`);
-    const data = res && res.response && res.response.data;
-    return Array.isArray(data) ? data : data ? [data] : [];
-  }
-
   function apiErrorText(err) {
     if (err && (err.status === 401 || err.status === 403)) return 'API 인증에 실패했어요. 키나 프록시 주소를 확인해 주세요.';
     if (err && err.status === 429) return '오늘 조회 한도를 넘었어요. 잠시 후 다시 시도해 주세요.';
@@ -849,24 +833,6 @@
     }
     return best;
   }
-  // 경로를 일정 길이로 잘라 구간마다 작은 bbox를 만든다 (경로 전체 bbox 한 번 조회 대신)
-  function routeChunks(coords, g, padDeg) {
-    const len = Math.max(CONFIG.CCTV_CHUNK_KM, g.total / CONFIG.CCTV_MAX_CHUNKS);
-    const out = []; let box = null, startKm = 0;
-    for (let i = 0; i < coords.length; i++) {
-      const [la, ln] = coords[i];
-      if (!box) box = { minLat: la, maxLat: la, minLng: ln, maxLng: ln };
-      if (la < box.minLat) box.minLat = la; if (la > box.maxLat) box.maxLat = la;
-      if (ln < box.minLng) box.minLng = ln; if (ln > box.maxLng) box.maxLng = ln;
-      if (g.cum[i] - startKm >= len && i < coords.length - 1) {
-        out.push(box); startKm = g.cum[i];
-        box = { minLat: la, maxLat: la, minLng: ln, maxLng: ln }; // 경계 꼭짓점은 다음 구간에도 넣는다
-      }
-    }
-    if (box) out.push(box);
-    return out.map(b => ({ minLat: b.minLat - padDeg, maxLat: b.maxLat + padDeg, minLng: b.minLng - padDeg, maxLng: b.maxLng + padDeg }));
-  }
-
   /* ── 상태 ── */
   const state = {
     areas: [], dataReady: false,
@@ -1216,58 +1182,222 @@
     return [...best.values()];
   }
 
-  // ITS CCTV 정보 조회 및 지도 표시
-  // - 경로를 구간으로 잘라 작은 범위만 조회하고, 구간 응답이 오는 대로 바로 그린다.
-  // - 경로 선 가까이(CCTV_MAX_KM)에 있고 진행 방향 쪽(오른쪽, 또는 도로 중앙)인 것만 남긴다.
-  // - 결과는 경로마다 저장해 두고, 탭을 오가거나 CCTV를 다시 켤 때 재사용한다.
-  const CCTV_ICON = L.divIcon({
-    className: 'mk-wrap', iconSize: [22, 22], iconAnchor: [11, 11],
-    html: '<div class="mk mk-cctv"><svg class="ic" style="width:14px;height:14px;stroke:#fff"><use href="#i-camera"/></svg></div>',
-  });
-  const isShownRoute = (route) => state.showCctv && state.routes[state.active] === route;
-  function addCctvMarker(it) {
-    L.marker([it.lat, it.lng], { icon: CCTV_ICON, title: it.item.cctvname || 'CCTV', zIndexOffset: 800 })
-      .on('click', () => openCctvModal(it.item, it.km))
-      .addTo(layers.cctv);
-  }
-  function cctvOnRoute(g, item) {
-    const lat = +item.coordy, lng = +item.coordx;
-    if (!Number.isFinite(lat) || !Number.isFinite(lng) || !inBox(g, lat, lng, 0.01)) return null;
-    const p = projectNear(g, lat, lng, CONFIG.CCTV_MAX_KM);
-    if (!p) return null;                                                // 경로 도로에서 떨어진 CCTV
-    const onCenter = p.dist <= CONFIG.CCTV_CENTER_KM;
-    if (!onCenter && !p.right) return null;                             // 반대 방향 쪽 CCTV
-    if (!onCenter && (p.km <= 0 || p.km >= g.total)) return null;       // 출발지 뒤·도착지 너머
-    return { item, lat, lng, km: p.km };
-  }
-  function ensureCctv(route, g) {
-    if (route.cctv) return route.cctv;
-    const c = route.cctv = { items: [], seen: new Set(), done: false };
-    const chunks = routeChunks(route.coords, g, 0.01);
-    let failed = 0;
-    c.promise = pool(chunks, 4, async (bbox) => {
-      let raw;
-      try { raw = await getItsCctv(bbox); } catch { failed++; return; }
-      const show = isShownRoute(route);
-      for (const item of raw) {
-        const it = cctvOnRoute(g, item); if (!it) continue;
-        const key = `${item.cctvname}|${it.lat.toFixed(5)}|${it.lng.toFixed(5)}`;
-        if (c.seen.has(key)) continue; c.seen.add(key);
-        c.items.push(it);
-        if (show) addCctvMarker(it);
-      }
-    }).then(() => {
-      c.done = true;
-      if (failed && route.cctv === c) route.cctv = null; // 실패한 구간이 있으면 다음에 다시 조회
+  /* ═══════════════════════════════════════════════════════════════════
+     CCTV (ITS 실시간 영상) — 처음부터 다시 작성한 모듈
+     흐름 : 경로를 긴 구간 몇 개로 나눔 → 구간마다 Worker(/its/cctv)에 한 번씩, 순서대로 조회
+            → 경로 가까이 있는 것만 골라 지도에 그림 → 아이콘을 누르면 영상 재생
+     원칙 : ① 요청 수 최소화 (경로당 최대 MAX_CHUNKS번, 동시에 1개씩)
+            ② 인증 오류(401/403)는 재시도하지 않고 즉시 멈춘 뒤 원인을 알려줌
+            ③ 실패해도 화면에 드러냄 (버튼 글자 + 안내 메시지 + 콘솔 기록)
+            ④ 같은 범위는 다시 요청하지 않음
+     ═══════════════════════════════════════════════════════════════════ */
+  const CCTV = (() => {
+    const MAX_KM = 0.3;      // 경로 선에서 이 거리 안의 CCTV만 표시
+    const CENTER_KM = 0.05;  // 이 거리 안이면 도로 중앙(중앙분리대)으로 보고 방향 무관하게 표시, 그보다 멀면 진행 방향 오른쪽만
+    const CHUNK_KM = 80;     // 한 번에 조회할 경로 길이
+    const MAX_CHUNKS = 5;    // 경로 하나당 요청 수 상한
+    const PAD_DEG = 0.006;   // 조회 범위를 살짝 넓힘 (약 600m)
+    const memo = new Map();  // 같은 범위는 새로고침 전까지 다시 요청하지 않음
+    const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+    const camIcon = L.divIcon({
+      className: 'mk-wrap', iconSize: [22, 22], iconAnchor: [11, 11],
+      html: '<div class="mk mk-cctv"><svg class="ic" style="width:14px;height:14px;stroke:#fff"><use href="#i-camera"/></svg></div>',
     });
-    return c;
-  }
-  function loadCctvItems(route, g) {
-    layers.cctv.clearLayers();
-    if (!state.showCctv || !route) return;
-    const c = ensureCctv(route, g);
-    c.items.forEach(addCctvMarker); // 이미 받아 둔 것은 바로 그리고, 진행 중인 구간은 도착하는 대로 추가됨
-  }
+    let hls = null;
+
+    const isShown = (route) => state.showCctv && state.routes[state.active] === route;
+    const authFail = (e) => e && (e.status === 401 || e.status === 403);
+    const quotaFail = (e) => e && (e.itsCode === 4001 || /호출 한도/.test(e.message || '')); // ITS: 월 호출 한도 초과
+    const stopAll = (e) => authFail(e) || quotaFail(e) || (e && e.status === 504);       // 키 거절·한도 초과·ITS 무응답이면 나머지 요청을 보내지 않음
+    const isBlocked = () => Date.now() < Number(store.get('cctv_quota_until', '0'));      // 한도 초과가 확인된 뒤 6시간은 ITS를 다시 부르지 않음
+    let quotaToasted = false;
+    const QUOTA_MSG = 'CCTV 월 호출 한도를 초과했어요. 국가교통정보센터 로그인 → 인증키 상세정보에서 월 호출 한도를 늘려 주세요. 늘린 뒤에는 CCTV 버튼을 껐다 켜면 바로 다시 시도해요.';
+
+    /* ── 받은 목록을 30분만 기기에 보관 (같은 구간을 다시 요청하지 않도록. 영상 주소가 오래되지 않게 짧게) ── */
+    const CACHE_TTL = 30 * 60 * 1000;
+    function cacheGet(key) {
+      try { const v = JSON.parse(localStorage.getItem('cctv:' + key) || 'null'); if (v && Date.now() - v.t < CACHE_TTL) return v.d; } catch {}
+      return null;
+    }
+    function cacheSet(key, list) {
+      try {
+        const slim = list.map((x) => ({ cctvname: x.cctvname, cctvurl: x.cctvurl, coordx: x.coordx, coordy: x.coordy }));
+        localStorage.setItem('cctv:' + key, JSON.stringify({ t: Date.now(), d: slim }));
+        const mine = Object.keys(localStorage).filter((k) => k.startsWith('cctv:'))
+          .map((k) => { let t = 0; try { t = JSON.parse(localStorage.getItem(k)).t; } catch {} return [k, t]; }).sort((a, b) => b[1] - a[1]);
+        mine.slice(12).forEach(([k]) => localStorage.removeItem(k));   // 최근 12개 구간만 유지
+      } catch {}
+    }
+
+    /* ── 버튼 글자: CCTV / CCTV … (불러오는 중) / CCTV 23 / CCTV 23 ⚠ (일부 실패) ── */
+    function label() {
+      const route = state.routes[state.active];
+      const job = route && route.cctv;
+      if (!state.showCctv) return 'CCTV';
+      if (!job) return isBlocked() ? 'CCTV ⚠' : 'CCTV';
+      if (!job.done) return 'CCTV …';
+      return `CCTV ${job.items.length}${job.failed.length ? ' ⚠' : ''}`;
+    }
+    function paintChip() {
+      const b = document.querySelector('.chip-cctv');
+      if (b) b.textContent = label();
+    }
+
+    /* ── 경로를 구간으로 나누어 각 구간의 조회 범위(상자)를 만든다 ── */
+    function split(route, g) {
+      const len = Math.max(CHUNK_KM, g.total / MAX_CHUNKS);
+      const fresh = (la, ln) => ({ minLat: la, maxLat: la, minLng: ln, maxLng: ln });
+      const boxes = []; let box = null, start = 0;
+      route.coords.forEach(([la, ln], i) => {
+        if (!box) box = fresh(la, ln);
+        box.minLat = Math.min(box.minLat, la); box.maxLat = Math.max(box.maxLat, la);
+        box.minLng = Math.min(box.minLng, ln); box.maxLng = Math.max(box.maxLng, ln);
+        if (g.cum[i] - start >= len && i < route.coords.length - 1) { boxes.push(box); start = g.cum[i]; box = fresh(la, ln); }
+      });
+      if (box) boxes.push(box);
+      return boxes.map((b) => ({ minLat: b.minLat - PAD_DEG, maxLat: b.maxLat + PAD_DEG, minLng: b.minLng - PAD_DEG, maxLng: b.maxLng + PAD_DEG }));
+    }
+
+    /* ── 한 구간 조회 (실패하면 status가 붙은 오류를 던짐) ── */
+    async function fetchBox(box) {
+      const key = [box.minLng, box.minLat, box.maxLng, box.maxLat].map((v) => v.toFixed(3)).join(',');
+      if (memo.has(key)) return memo.get(key);
+      const saved = cacheGet(key);
+      if (saved) { memo.set(key, saved); return saved; }
+      const qs = new URLSearchParams({ minX: box.minLng.toFixed(5), maxX: box.maxLng.toFixed(5), minY: box.minLat.toFixed(5), maxY: box.maxLat.toFixed(5) });
+      const fail = (status, msg) => Object.assign(new Error(msg), { status });
+      const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), 30000);
+      let res;
+      try { res = await fetch(`${CONFIG.API_BASE}/its/cctv?${qs}`, { signal: ctl.signal }); }
+      catch { throw fail(0, '연결 실패 또는 시간 초과'); }
+      finally { clearTimeout(timer); }
+      if (!res.ok) {                                                    // ITS가 보낸 오류 문구(예: 월 호출 한도 초과)를 읽어 둠
+        let msg = `ITS 응답 오류 ${res.status}`, code = null;
+        try { const j = JSON.parse(await res.text()); if (j && j.header) { code = j.header.resultCode; msg = j.header.resultMsg || msg; } } catch {}
+        throw Object.assign(fail(res.status, msg), { itsCode: code });
+      }
+      let json;
+      try { json = await res.json(); } catch { throw fail(res.status, '응답을 읽지 못함'); }
+      if (json && json.header && !json.response) throw Object.assign(fail(res.status, json.header.resultMsg || 'ITS 오류'), { itsCode: json.header.resultCode });
+      const d = json && json.response && json.response.data;           // 결과가 1개면 배열이 아니라 객체로 올 수 있음
+      const list = Array.isArray(d) ? d : d ? [d] : [];
+      memo.set(key, list); cacheSet(key, list);
+      return list;
+    }
+
+    /* ── 경로 가까이 있는 CCTV만 골라 지도에 올린다 ── */
+    function onRoute(g, raw) {
+      const lat = +raw.coordy, lng = +raw.coordx;
+      if (!Number.isFinite(lat) || !Number.isFinite(lng) || !inBox(g, lat, lng, 0.01)) return null;
+      const p = projectNear(g, lat, lng, MAX_KM);
+      if (!p) return null;                                              // 경로 도로에서 떨어진 CCTV
+      const center = p.dist <= CENTER_KM;
+      if (!center && !p.right) return null;                             // 반대 방향 쪽 CCTV
+      if (!center && (p.km <= 0 || p.km >= g.total)) return null;       // 출발지 뒤·도착지 너머
+      return { item: raw, lat, lng, km: p.km };
+    }
+    function add(p) {
+      L.marker([p.lat, p.lng], { icon: camIcon, title: p.item.cctvname || 'CCTV', zIndexOffset: 800 })
+        .on('click', () => play(p.item, p.km)).addTo(layers.cctv);
+    }
+
+    /* ── 구간들을 순서대로 조회 ── */
+    async function run(job, route, g, boxes) {
+      job.done = false; job.failed = []; job.fatal = false; paintChip();
+      let lastErr = null;
+      for (let i = 0; i < boxes.length; i++) {
+        let list = null;
+        for (let a = 0; a < 2 && !list; a++) {                          // 구간당 최대 2번 (1.2초 쉬고 재시도)
+          try { list = await fetchBox(boxes[i]); }
+          catch (e) { lastErr = e; if (stopAll(e)) break; if (a === 0) await sleep(1200); }
+        }
+        if (list) {
+          store.set('cctv_quota_until', '0');
+          job.raw += list.length;
+          for (const raw of list) {
+            const p = onRoute(g, raw); if (!p) continue;
+            const key = `${raw.cctvname}|${p.lat.toFixed(5)}|${p.lng.toFixed(5)}`;
+            if (job.seen.has(key)) continue; job.seen.add(key);
+            job.items.push(p);
+            if (isShown(route)) add(p);
+          }
+          paintChip();
+        } else {
+          job.failed.push(boxes[i]);
+          if (stopAll(lastErr)) { job.fatal = true; job.failed.push(...boxes.slice(i + 1)); break; } // 키 거절·ITS 무응답이면 나머지는 요청하지 않음
+        }
+      }
+      job.done = true;
+      console.info('[CCTV]', { 구간수: boxes.length, ITS원본: job.raw, 경로위: job.items.length, 실패구간: job.failed.length, 마지막오류: lastErr ? lastErr.status : null });
+      if (!isShown(route)) return;
+      paintChip();
+      if (job.fatal && quotaFail(lastErr)) { store.set('cctv_quota_until', String(Date.now() + 6 * 3600 * 1000)); quotaToasted = true; toast(QUOTA_MSG, 9000); }
+      else if (job.fatal && lastErr.status === 504) toast('CCTV 서버(ITS)가 응답하지 않아요. 잠시 뒤 CCTV 버튼을 껐다 켜 보세요.', 6000);
+      else if (job.fatal) toast(`CCTV 서버가 인증키를 거절했어요 (오류 ${lastErr.status}). Cloudflare의 ITS_CCTV_API_KEY 값을 확인해 주세요.`, 6000);
+      else if (job.failed.length) toast(`CCTV 일부를 불러오지 못했어요${lastErr && lastErr.status ? ` (오류 ${lastErr.status})` : ''}. CCTV 버튼을 껐다 켜면 다시 시도해요.`, 5000);
+    }
+
+    /* ── 공개 함수 ── */
+    function load(route, g, force) {                                    // 경로를 고르거나 CCTV를 켤 때 호출
+      layers.cctv.clearLayers();
+      if (!state.showCctv || !route || !g) { paintChip(); return; }
+      let job = route.cctv;
+      if (!job && !force && isBlocked()) {
+        if (!quotaToasted) { quotaToasted = true; toast(QUOTA_MSG, 9000); }
+        paintChip(); return;
+      }
+      if (!job) {
+        job = route.cctv = { items: [], seen: new Set(), raw: 0, done: false, failed: [], fatal: false };
+        run(job, route, g, split(route, g));
+      } else {
+        job.items.forEach(add);                                         // 이미 받은 것은 바로 그림
+        if (job.done && job.failed.length && (force || !job.fatal)) run(job, route, g, job.failed); // 실패한 구간만 다시
+      }
+      paintChip();
+    }
+    function toggle() {
+      state.showCctv = !state.showCctv; store.set('pref_show_cctv', state.showCctv ? '1' : '0');
+      if (state.showCctv) load(state.routes[state.active], state.geo, true); else layers.cctv.clearLayers();
+      renderIndex();                                                    // 버튼·범례 갱신
+    }
+
+    /* ── 영상 재생 (아이콘을 눌렀을 때) ── */
+    function stop() { if (hls) { hls.destroy(); hls = null; } }
+    function play(item, km) {
+      stop();
+      $('#detailTitle').textContent = item.cctvname || 'CCTV 영상';
+      $('#detailSub').textContent = `출발 후 약 ${Math.round(km)}km 지점 (실시간 영상)`;
+      $('#detailUsage').hidden = true;
+      const video = document.createElement('video');
+      video.controls = true; video.autoplay = true; video.muted = true; video.playsInline = true;
+      video.setAttribute('playsinline', '');
+      const msg = h('p', { class: 'sub', style: 'padding:8px 2px' }, '영상 불러오는 중…');
+      $('#detailBody').replaceChildren(h('section', { class: 'sec' }, h('div', { class: 'cctv-player-container' }, video), msg));
+      openSheet('detailSheet');
+
+      const src = `${CONFIG.API_BASE}/its/stream?url=${encodeURIComponent(item.cctvurl)}`;
+      const ready = () => { msg.textContent = ''; video.play().catch(() => {}); };
+      if (window.Hls && Hls.isSupported()) {
+        const player = hls = new Hls({ manifestLoadingMaxRetry: 2, levelLoadingMaxRetry: 2, fragLoadingMaxRetry: 3 });
+        player.on(Hls.Events.MANIFEST_PARSED, ready);
+        player.on(Hls.Events.FRAG_LOADED, () => { msg.textContent = ''; });
+        player.on(Hls.Events.ERROR, (_e, d) => {
+          console.warn('[CCTV 영상]', d.type, d.details, d.response && d.response.code, d.url);
+          if (d.fatal) { msg.textContent = `영상을 불러오지 못했어요 (${d.details}${d.response ? ' / ' + d.response.code : ''})`; player.destroy(); if (hls === player) hls = null; }
+        });
+        player.loadSource(src);
+        player.attachMedia(video);
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) { // 아이폰 Safari 등 자체 HLS 재생
+        video.src = src;
+        video.addEventListener('loadedmetadata', ready);
+        video.addEventListener('error', () => { msg.textContent = '영상을 불러오지 못했어요.'; });
+      } else {
+        msg.textContent = '현재 브라우저에서는 이 CCTV 영상을 재생할 수 없습니다.';
+      }
+    }
+
+    return { load, toggle, label, stop };
+  })();
 
   async function selectRoute(i) {
     if (!state.routes[i]) return;
@@ -1277,8 +1407,8 @@
     const route = state.routes[i];
     const g = state.geo = route.geo || (route.geo = buildGeo(route.coords));
 
-    // CCTV 불러오기 (비동기, 네트워크 요청을 가장 먼저 시작)
-    loadCctvItems(route, g);
+    // CCTV 불러오기 (비동기, 기다리지 않고 바로 다음 작업으로 진행)
+    CCTV.load(route, g);
 
     state.items = route.kind === 'free' ? [] : (state.dataReady ? restItems(g) : []);
     const wantExtras = route.kind === 'free' || state.showDrowsy;
@@ -1393,7 +1523,7 @@
         h('p', { class: 'index-sub' }, isFree ? '오피넷 가격은 눌러서 확인해요' : '진행 방향 오른쪽만 · 유가는 수집 시점 값')),
       h('button', { class: 'text-btn list-toggle', type: 'button', onclick: toggleListSize }, icon(large ? 'expand' : 'list', 'ic ic-sm'), large ? '지도 크게' : '목록 크게'),
     );
-    const cctvChip = h('button', { class: 'chip chip-layer chip-cctv', type: 'button', 'aria-pressed': String(state.showCctv), onclick: toggleCctv }, 'CCTV');
+    const cctvChip = h('button', { class: 'chip chip-layer chip-cctv', type: 'button', 'aria-pressed': String(state.showCctv), onclick: () => CCTV.toggle() }, CCTV.label());
     const chips = h('div', { class: 'chips', role: 'group', 'aria-label': '연료·표시 거르기' },
       isFree ? [] : [
         ...[['ALL', '전체'], ['GAS', '주유소'], ['LPG', 'LPG'], ['EV', '전기차 충전']].map(([v, label]) =>
@@ -1428,12 +1558,6 @@
     const route = state.routes[state.active];
     if (state.showDrowsy && route && route.kind !== 'free' && !state.items.some(i => i.kind === 'drowsy')) selectRoute(state.active);
     else renderIndex();
-  }
-  function toggleCctv() {
-    state.showCctv = !state.showCctv; store.set('pref_show_cctv', state.showCctv ? '1' : '0');
-    if (state.showCctv) { if (state.geo) loadCctvItems(state.routes[state.active], state.geo); }
-    else layers.cctv.clearLayers();
-    renderIndex();
   }
   function scrollRowIntoView(key) {
     const el = document.querySelector(`.row[data-key="${CSS.escape(key)}"]`);
@@ -1471,7 +1595,6 @@
   }
 
   /* ── 시트 ── */
-  let currentHls = null;
   const wide = matchMedia('(min-width: 900px)');
   function openSheet(id) {
     const d = document.getElementById(id);
@@ -1483,7 +1606,7 @@
     d.addEventListener('click', (e) => { if (e.target === d || e.target.closest('[data-close]')) d.close(); });
     d.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !d.matches(':modal')) d.close(); });
     d.addEventListener('close', () => {
-      if (currentHls) { currentHls.destroy(); currentHls = null; }
+      CCTV.stop();
       if (history.state && history.state.sheet === d.id) history.back();
     });
   });
@@ -1499,47 +1622,6 @@
     else {
       const mk = markerByKey.get(it.key);
       if (mk) mk.bindPopup(`${escapeHtml(it.d.place_name)}<br><span style="font-weight:500">출발 후 ${Math.round(it.km)}km</span>`).openPopup();
-    }
-  }
-
-  // CCTV 실시간 스트리밍 모달 팝업
-  function openCctvModal(item, km) {
-    $('#detailTitle').textContent = item.cctvname || 'CCTV 영상';
-    $('#detailSub').textContent = `출발 후 약 ${Math.round(km)}km 지점 (실시간 HLS 영상)`;
-    $('#detailUsage').hidden = true;
-
-    const video = h('video', { controls: true, autoplay: true, playsinline: true });
-    video.muted = true; // 속성이 아니라 프로퍼티로 지정해야 자동재생이 막히지 않음
-    const container = h('div', { class: 'cctv-player-container' }, video);
-    const msg = h('p', { class: 'sub', style: 'padding:8px 2px' }, '영상 불러오는 중…');
-
-    $('#detailBody').replaceChildren(h('section', { class: 'sec' }, container, msg));
-    openSheet('detailSheet');
-
-    // Worker가 m3u8 안의 주소를 전부 프록시 주소로 바꿔서 주므로 xhrSetup 불필요
-    const proxiedUrl = `${CONFIG.API_BASE}/its/stream?url=${encodeURIComponent(item.cctvurl)}`;
-
-    if (currentHls) { currentHls.destroy(); currentHls = null; }
-    if (window.Hls && Hls.isSupported()) {
-      const hls = new Hls({ manifestLoadingMaxRetry: 2, levelLoadingMaxRetry: 2, fragLoadingMaxRetry: 3 });
-      hls.on(Hls.Events.MANIFEST_PARSED, () => { msg.textContent = ''; video.play().catch(() => {}); });
-      hls.on(Hls.Events.FRAG_LOADED, () => { msg.textContent = ''; });
-      hls.on(Hls.Events.ERROR, (_e, data) => {
-        console.warn('[CCTV HLS]', data.type, data.details, data.response && data.response.code, data.url);
-        if (data.fatal) {
-          msg.textContent = `영상을 불러오지 못했어요 (${data.details}${data.response ? ' / ' + data.response.code : ''})`;
-          hls.destroy(); currentHls = null;
-        }
-      });
-      hls.loadSource(proxiedUrl);
-      hls.attachMedia(video);
-      currentHls = hls;
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = proxiedUrl;
-      video.addEventListener('loadedmetadata', () => { msg.textContent = ''; video.play().catch(() => {}); });
-      video.addEventListener('error', () => { msg.textContent = '영상을 불러오지 못했어요.'; });
-    } else {
-      msg.textContent = '현재 브라우저에서는 이 CCTV 영상을 재생할 수 없습니다.';
     }
   }
 
